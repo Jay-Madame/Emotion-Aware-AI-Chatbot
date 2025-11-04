@@ -1,43 +1,52 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Chat UI</title>
-  <link rel="stylesheet" href="styles.css?v=2">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chat UI</title>
+    <link rel="stylesheet" href="styles.css?v=5" />
 </head>
-    <script src="app.js?v=5"></script>
-
 <body>
-  <div class="app">
+    <div class="app">
+        <!-- LEFT: Tools + Bookshelf + Info + Background Panel -->
+        <aside class="left" id="leftPane">
+            <header class="left__header">
+                <h3>Archive</h3>
+            </header>
 
-    <!-- LEFT: Conversations (top) + Background (bottom) -->
-<aside class="left" id="leftPane">
-  <header class="left__header">
-    <h3>Stored Conversations</h3>
-  </header>
+            <!-- TOP: Quick tools -->
+            <div class="tools">
+                <input id="chatSearch" type="search" placeholder="Search chats…" />
+                <button id="newChatTop" class="btn btn--small">+ New</button>
+            </div>
 
-  <div class="convos" id="convoList"></div>
+            <!-- MIDDLE: Horizontal bookshelf -->
+            <div class="shelfWrap">
+                <div class="shelf" id="convoShelf" aria-label="Chat bookshelf"></div>
+            </div>
 
-  <!-- Background image panel at bottom-left -->
-  <div class="bgpanel" aria-hidden="true"></div>
-</aside>
+            <!-- UNDER SHELF: Info strip -->
+            <div class="shelfInfo" id="shelfInfo" aria-live="polite"></div>
 
-    <!-- RIGHT: Header + Messages + Composer (5/7) -->
-    <main class="right">
-      <div class="right__header">
-        <h2>Chatbot Frontend</h2>
-      </div>
+            <!-- BOTTOM: Character / background stage -->
+            <div class="bgpanel" aria-hidden="true"></div>
+        </aside>
 
-      <div class="right__messages" id="messages"></div>
+        <!-- RIGHT: Header + Messages + Composer -->
+        <main class="right">
+            <div class="right__header">
+                <h2>Chatbot Frontend</h2>
+            </div>
 
-      <form class="right__composer" id="composer">
-        <textarea id="input" rows="1" placeholder="Type a message… (Shift+Enter for newline)"></textarea>
-        <button type="submit" aria-label="Send">➤</button>
-      </form>
-    </main>
+            <div class="right__messages" id="messages"></div>
 
-  </div>
- 
+            <form class="right__composer" id="composer">
+                <textarea id="input" rows="1" placeholder="Type a message… (Shift+Enter for newline)"></textarea>
+                <button type="submit" aria-label="Send">➤</button>
+            </form>
+        </main>
+    </div>
+
+    <script src="app.js?v=8" defer></script>
 </body>
 </html>
