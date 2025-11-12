@@ -33,9 +33,11 @@ backend_venv\Scripts\activate
 pip install -r docs/backend_requirements.txt
 ```
 
-## 5. Run the Front end on local host
+## 5. Run the front end integration with Backend API
 
 ```bash
-cd ...\chat_ui
+uvicorn src.server:app --host 0.0.0.0 --port 8000 --reload
+In another Terminal
 python -m http.server 5173
+
 ```
