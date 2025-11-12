@@ -32,3 +32,10 @@ backend_venv\Scripts\activate
 ```bash
 pip install -r docs/backend_requirements.txt
 ```
+
+## 5. Run the Front end on local host
+
+```bash
+cd ...\chat_ui
+python -m http.server 5173
+```
