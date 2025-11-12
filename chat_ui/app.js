@@ -1,4 +1,4 @@
-// ===================== app.js (full integration) =====================
+﻿// ===================== app.js (full integration) =====================
 // - Slack-style sending: Enter=Send, Shift+Enter=newline
 // - Multi-conversation storage in localStorage
 // - Horizontal "bookshelf" convo picker with tooltips, search, top +New
@@ -8,6 +8,9 @@
     const TYPING_STEP_TARGET = 80;
     const SUBMIT_THROTTLE_MS = 120;
     const now = () => Date.now();
+
+    // >>> ADD: point this at your API
+    const BACKEND_URL = "http://localhost:8000/chat";
 
     function uuid() {
         if (crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -177,7 +180,7 @@
             if (!c) { shelfInfo.textContent = ""; return; }
             const count = c.messages.length;
             const updated = new Date(c.updatedAt).toLocaleString();
-            shelfInfo.textContent = `Active: ${c.title || "New chat"} � ${count} message${count === 1 ? "" : "s"} � updated ${updated}`;
+            shelfInfo.textContent = `Active: ${c.title || "New chat"} • ${count} message${count === 1 ? "" : "s"} • updated ${updated}`;
         }
 
         // Top controls
@@ -211,23 +214,33 @@
             }
         }, { passive: false });
 
-        form.addEventListener("submit", (e) => {
+        // >>> REPLACED submit handler to call backend
+        form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const text = input.value.trim();
             if (!text) return;
 
+            // Optimistic UI: add user message
             appendMessage("user", text);
             addMessage(text, "me");
             input.value = ""; autoResize();
 
-            const reply = `Echoing: ${text}`;
-            setTimeout(() => {
+            // Add a placeholder assistant bubble we can update
+            const placeholder = addMessage("...", "bot", /*returnEl*/ true);
+
+            try {
+                const reply = await sendToBackend(text);
+                // Save & render assistant message
                 appendMessage("assistant", reply);
-                streamBotReply(reply);
-            }, 120);
+                placeholder.textContent = "";
+                streamBotReplyInto(placeholder, reply); // type-on effect
+            } catch (err) {
+                const msg = (err && err.message) ? err.message : "Network error.";
+                placeholder.textContent = `⚠️ ${msg}`;
+            }
         });
 
-        function addMessage(text, who = "bot") {
+        function addMessage(text, who = "bot", returnEl = false) {
             const div = document.createElement("div");
             div.className = "msg" + (who === "me" ? " me" : "");
             div.textContent = text;
@@ -235,12 +248,26 @@
                 messages.appendChild(div);
                 messages.scrollTop = messages.scrollHeight;
             });
+            return returnEl ? div : undefined;
         }
 
-        function streamBotReply(fullText) {
-            const div = document.createElement("div");
-            div.className = "msg";
-            messages.appendChild(div);
+        // >>> NEW: call the API
+        async function sendToBackend(userText) {
+            const res = await fetch(BACKEND_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: userText }),
+            });
+            if (!res.ok) {
+                let detail = "";
+                try { detail = (await res.json()).detail; } catch { }
+                throw new Error(detail || `HTTP ${res.status}`);
+            }
+            const data = await res.json();
+            return data.reply || "";
+        }
+
+        function streamBotReplyInto(div, fullText) {
             let i = 0;
             const step = Math.max(2, Math.floor(fullText.length / TYPING_STEP_TARGET));
             const tick = () => {

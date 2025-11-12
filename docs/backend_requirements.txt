@@ -3,3 +3,7 @@ langchain-google-genai==2.1.12
 langchain-groq==0.3.8
 python-dotenv==1.1.1
 vaderSentiment==3.3.2
+
+fastapi==0.115.5
+uvicorn[standard]==0.32.0
+
