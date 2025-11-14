@@ -82,7 +82,8 @@ neutral_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3
 positive_prompt = PromptTemplate(
     input_variables=["user_input"],
     template=(
-        "The user seems happy! Respond enthusiastically and build on their positive energy.\n\n"
+        "The user seems happy! Respond enthusiastically and build on their positive energy.\n"
+        "Keep your answer concise: at most 4–6 short sentences. Avoid long lists unless the user explicitly asks.\n\n"
         "User: {user_input}\n\nResponse:"
     ),
 )
@@ -91,7 +92,8 @@ negative_prompt = PromptTemplate(
     input_variables=["user_input"],
     template=(
         "The user seems upset. Respond with empathy and try to help solve their problem.\n"
-        "Keep your response supportive but practical.\n\n"
+        "Be supportive but practical, and keep your answer concise: at most 4–6 short sentences.\n"
+        "Avoid over-explaining unless the user asks for more detail.\n\n"
         "User: {user_input}\n\nResponse:"
     ),
 )
@@ -99,10 +101,12 @@ negative_prompt = PromptTemplate(
 neutral_prompt = PromptTemplate(
     input_variables=["user_input"],
     template=(
-        "Respond to the user's query in a helpful, informative way.\n\n"
+        "Respond to the user's query in a helpful, informative way.\n"
+        "Keep it focused and concise: at most 4–6 short sentences unless they request a deep dive.\n\n"
         "User: {user_input}\n\nResponse:"
     ),
 )
+
 
 # 7. Mental health response template
 MENTAL_HEALTH_RESPONSE = """I hear that you're going through a difficult time. I'm an AI and not a certified mental health professional, so I encourage you to reach out to a qualified specialist who can provide proper support.

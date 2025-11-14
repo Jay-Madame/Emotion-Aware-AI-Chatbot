@@ -336,17 +336,23 @@
             return data.reply || "";
         }
 
+        const TYPING_STEP_TARGET = 80;
         function streamBotReplyInto(div, fullText) {
             let i = 0;
-            const step = Math.max(2, Math.floor(fullText.length / TYPING_STEP_TARGET));
+            const step = 1; // 1 char at a time
+
             const tick = () => {
                 i += step;
                 div.textContent = fullText.slice(0, i);
                 messages.scrollTop = messages.scrollHeight;
-                if (i < fullText.length) requestAnimationFrame(tick);
+                if (i < fullText.length) {
+                    requestAnimationFrame(tick);
+                }
             };
+
             requestAnimationFrame(tick);
         }
+
 
         // Optional keyboard nav across books
         shelf.addEventListener("keydown", (e) => {
