@@ -15,10 +15,14 @@
     function uuid() {
         if (crypto && crypto.randomUUID) return crypto.randomUUID();
         return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
-            const r = (Math.random() * 16) | 0; const v = c === "x" ? r : (r & 0x3) | 0x8; return v.toString(16);
+            const r = (Math.random() * 16) | 0;
+            const v = c === "x" ? r : (r & 0x3) | 0x8;
+            return v.toString(16);
         });
     }
-    function safeParse(json, fallback) { try { return JSON.parse(json); } catch { return fallback; } }
+    function safeParse(json, fallback) {
+        try { return JSON.parse(json); } catch { return fallback; }
+    }
     function loadConvos() {
         const raw = localStorage.getItem(CONVO_KEY);
         const arr = safeParse(raw, []);
@@ -32,6 +36,9 @@
         const chatSearch = document.getElementById("chatSearch");
         const newChatTop = document.getElementById("newChatTop");
         const shelfInfo = document.getElementById("shelfInfo");
+        const chatTitleInput = document.getElementById("chatTitleInput");
+        const shelfMeta = document.getElementById("shelfMeta");
+        const deleteChatBtn = document.getElementById("deleteChatBtn");
         const messages = document.getElementById("messages");
         const form = document.getElementById("composer");
         const input = document.getElementById("input");
@@ -49,9 +56,13 @@
         renderConvos();
         renderMessages();
 
+        // ---------- helpers ----------
         function saveConvos() {
-            try { localStorage.setItem(CONVO_KEY, JSON.stringify(convos.slice(0, MAX_CONVOS))); }
-            catch (e) { console.warn("localStorage save failed:", e); }
+            try {
+                localStorage.setItem(CONVO_KEY, JSON.stringify(convos.slice(0, MAX_CONVOS)));
+            } catch (e) {
+                console.warn("localStorage save failed:", e);
+            }
         }
 
         function createConversation(title = "New chat") {
@@ -74,17 +85,26 @@
         function renameConversation(id, title) {
             const c = convos.find(x => x.id === id);
             if (!c) return;
-            c.title = (title || "").trim() || c.title;
+            const trimmed = (title || "").trim();
+            if (trimmed) {
+                c.title = trimmed;
+            }
             c.updatedAt = now();
             saveConvos();
             renderConvos(chatSearch?.value.trim().toLowerCase() || "");
+            updateShelfInfo();
         }
 
         function deleteConversation(id) {
             const i = convos.findIndex(x => x.id === id);
             if (i >= 0) {
                 convos.splice(i, 1);
-                if (activeId === id) activeId = convos[0]?.id || createConversation();
+                if (activeId === id) {
+                    activeId = convos[0]?.id || null;
+                    if (!activeId) {
+                        createConversation();
+                    }
+                }
                 saveConvos();
                 renderConvos(chatSearch?.value.trim().toLowerCase() || "");
                 renderMessages();
@@ -177,19 +197,66 @@
         function updateShelfInfo() {
             if (!shelfInfo) return;
             const c = convos.find(x => x.id === activeId);
-            if (!c) { shelfInfo.textContent = ""; return; }
+            if (!c) {
+                if (chatTitleInput && document.activeElement !== chatTitleInput) {
+                    chatTitleInput.value = "";
+                }
+                if (shelfMeta) shelfMeta.textContent = "";
+                return;
+            }
             const count = c.messages.length;
             const updated = new Date(c.updatedAt).toLocaleString();
-            shelfInfo.textContent = `Active: ${c.title || "New chat"} • ${count} message${count === 1 ? "" : "s"} • updated ${updated}`;
+
+            // Keep input in sync unless user is currently editing
+            if (chatTitleInput && document.activeElement !== chatTitleInput) {
+                chatTitleInput.value = c.title || "New chat";
+            }
+            if (shelfMeta) {
+                shelfMeta.textContent = `${count} message${count === 1 ? "" : "s"} • updated ${updated}`;
+            }
         }
 
-        // Top controls
-        if (newChatTop) newChatTop.addEventListener("click", () => createConversation());
-        if (chatSearch) chatSearch.addEventListener("input", () => {
-            renderConvos(chatSearch.value.trim().toLowerCase());
-        });
+        // ---------- top controls ----------
+        if (newChatTop) {
+            newChatTop.addEventListener("click", () => createConversation());
+        }
+        if (chatSearch) {
+            chatSearch.addEventListener("input", () => {
+                renderConvos(chatSearch.value.trim().toLowerCase());
+            });
+        }
 
-        // Composer: Slack-style Enter
+        // ---------- title input + delete button ----------
+        function renameActiveFromInput() {
+            if (!chatTitleInput || !activeId) return;
+            const val = chatTitleInput.value.trim();
+            if (!val) return;
+            renameConversation(activeId, val);
+        }
+
+        if (chatTitleInput) {
+            chatTitleInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    e.preventDefault();
+                    renameActiveFromInput();
+                    chatTitleInput.blur();
+                }
+            });
+            chatTitleInput.addEventListener("blur", () => {
+                renameActiveFromInput();
+            });
+        }
+
+        if (deleteChatBtn) {
+            deleteChatBtn.addEventListener("click", () => {
+                if (!activeId) return;
+                if (confirm("Delete this conversation?")) {
+                    deleteConversation(activeId);
+                }
+            });
+        }
+
+        // ---------- Composer: Slack-style Enter ----------
         input.addEventListener("keydown", (e) => {
             if (e.isComposing) return;
             if (e.key === "Enter" && !e.shiftKey) {
@@ -210,11 +277,12 @@
 
         window.addEventListener("keydown", (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-                e.preventDefault(); input.focus();
+                e.preventDefault();
+                input.focus();
             }
         }, { passive: false });
 
-        // >>> REPLACED submit handler to call backend
+        // ---------- Submit handler (calls backend) ----------
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const text = input.value.trim();
@@ -223,7 +291,8 @@
             // Optimistic UI: add user message
             appendMessage("user", text);
             addMessage(text, "me");
-            input.value = ""; autoResize();
+            input.value = "";
+            autoResize();
 
             // Add a placeholder assistant bubble we can update
             const placeholder = addMessage("...", "bot", /*returnEl*/ true);
@@ -251,7 +320,7 @@
             return returnEl ? div : undefined;
         }
 
-        // >>> NEW: call the API
+        // ---------- API call ----------
         async function sendToBackend(userText) {
             const res = await fetch(BACKEND_URL, {
                 method: "POST",
@@ -284,7 +353,9 @@
             if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
             const books = [...shelf.querySelectorAll(".book")];
             const i = books.findIndex(b => b.classList.contains("active"));
-            const next = e.key === "ArrowRight" ? Math.min(i + 1, books.length - 1) : Math.max(i - 1, 0);
+            const next = e.key === "ArrowRight"
+                ? Math.min(i + 1, books.length - 1)
+                : Math.max(i - 1, 0);
             books[next]?.click();
             books[next]?.scrollIntoView({ behavior: "smooth", inline: "center" });
         });

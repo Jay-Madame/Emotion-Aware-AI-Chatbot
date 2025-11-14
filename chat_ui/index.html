@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chat UI</title>
-    <link rel="stylesheet" href="styles.css?v=5" />
+    <link rel="stylesheet" href="styles.css?v=6" />
 </head>
 <body>
     <div class="app">
@@ -25,8 +25,30 @@
                 <div class="shelf" id="convoShelf" aria-label="Chat bookshelf"></div>
             </div>
 
-            <!-- UNDER SHELF: Info strip -->
-            <div class="shelfInfo" id="shelfInfo" aria-live="polite"></div>
+            <!-- UNDER SHELF: Info strip + rename + delete -->
+            <div class="shelfInfo" id="shelfInfo" aria-live="polite">
+                <div class="shelfInfo__main">
+                    <div class="shelfInfo__titleRow">
+                        <span class="shelfInfo__label">Active chat:</span>
+                        <input
+                            id="chatTitleInput"
+                            class="shelfInfo__titleInput"
+                            type="text"
+                            placeholder="New chat"
+                        />
+                    </div>
+                    <div id="shelfMeta" class="shelfInfo__meta"></div>
+                </div>
+                <button
+                    id="deleteChatBtn"
+                    class="iconBtn"
+                    type="button"
+                    title="Delete this chat"
+                    aria-label="Delete this chat"
+                >
+                    🗑
+                </button>
+            </div>
 
             <!-- BOTTOM: Character / background stage -->
             <div class="bgpanel" aria-hidden="true"></div>
@@ -41,12 +63,16 @@
             <div class="right__messages" id="messages"></div>
 
             <form class="right__composer" id="composer">
-                <textarea id="input" rows="1" placeholder="Type a message… (Shift+Enter for newline)"></textarea>
+                <textarea
+                    id="input"
+                    rows="1"
+                    placeholder="Type a message… (Shift+Enter for newline)"
+                ></textarea>
                 <button type="submit" aria-label="Send">➤</button>
             </form>
         </main>
     </div>
 
-    <script src="app.js?v=8" defer></script>
+    <script src="app.js?v=9" defer></script>
 </body>
 </html>
