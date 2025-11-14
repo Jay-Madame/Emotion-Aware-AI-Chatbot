@@ -2,14 +2,13 @@
 // - Slack-style sending: Enter=Send, Shift+Enter=newline
 // - Multi-conversation storage in localStorage
 // - Horizontal "bookshelf" convo picker with tooltips, search, top +New
+// - Bot stage animation in bottom-left bgpanel (waiting -> thinking -> writing)
 (() => {
     const CONVO_KEY = "chatui_convos_v2";
     const MAX_CONVOS = 50;
-    const TYPING_STEP_TARGET = 80;
     const SUBMIT_THROTTLE_MS = 120;
     const now = () => Date.now();
 
-    // >>> ADD: point this at your API
     const BACKEND_URL = "http://localhost:8000/chat";
 
     function uuid() {
@@ -20,9 +19,11 @@
             return v.toString(16);
         });
     }
+
     function safeParse(json, fallback) {
         try { return JSON.parse(json); } catch { return fallback; }
     }
+
     function loadConvos() {
         const raw = localStorage.getItem(CONVO_KEY);
         const arr = safeParse(raw, []);
@@ -43,6 +44,10 @@
         const form = document.getElementById("composer");
         const input = document.getElementById("input");
 
+        // NEW: bgpanel stage elements
+        const botStageImg = document.getElementById("botStageImg");
+        const botStageText = document.getElementById("botStageText");
+
         if (!shelf || !messages || !form || !input) {
             console.error("Chat UI elements not found.");
             return;
@@ -52,11 +57,105 @@
         let activeId = (convos[0]?.id) || null;
         let lastSubmitAt = 0;
 
+        // ---------- bot stage controller ----------
+        let stageInterval = null;
+
+        function setBotStage(stage, dots = 0) {
+            if (!botStageImg || !botStageText) return;
+
+            switch (stage) {
+                case "idle":
+                    botStageImg.src = "Images/temp-idle.png";   // adjust if needed
+                    botStageText.textContent = "Ready to chat";
+                    break;
+                case "waiting":
+                    botStageImg.src = "Images/temp-waiting.png";
+                    botStageText.textContent = "Waiting…";
+                    break;
+                case "thinking":
+                    botStageImg.src = "Images/temp-thinking.png";
+                    botStageText.textContent = "Thinking" + ".".repeat(dots);
+                    break;
+                case "writing":
+                    botStageImg.src = "Images/temp-writing.png";
+                    botStageText.textContent = "Writing a reply…";
+                    break;
+                case "error":
+                    botStageImg.src = "Images/temp-thinking.png"; // or a dedicated error icon
+                    botStageText.textContent = "Error talking to the server.";
+                    break;
+            }
+
+            console.log("setBotStage:", stage, dots); 
+        }
+
+        function resetBotStageToIdleLater() {
+            // After some delay, go back to idle so it doesn't stay on "writing" forever
+            setTimeout(() => {
+                setBotStage("idle");
+            }, 2000);
+        }
+
+        function startBotStageCycle() {
+            if (!botStageImg || !botStageText) {
+                return {
+                    toWriting() { },
+                    showError() { },
+                    stop() { }
+                };
+            }
+
+            // Clear any previous animation
+            if (stageInterval) clearInterval(stageInterval);
+
+            let state = "waiting";
+            let dots = 0;
+            const startTime = Date.now();
+
+            setBotStage("waiting");
+
+            stageInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+
+                if (elapsed > 500 && state === "waiting") {
+                    state = "thinking";
+                    dots = 0;
+                } else if (state === "thinking") {
+                    dots = (dots + 1) % 4;
+                }
+
+                if (state === "waiting") {
+                    setBotStage("waiting");
+                } else if (state === "thinking") {
+                    setBotStage("thinking", dots);
+                }
+            }, 350);
+
+            return {
+                toWriting() {
+                    if (stageInterval) clearInterval(stageInterval);
+                    setBotStage("writing");
+                },
+                showError() {
+                    if (stageInterval) clearInterval(stageInterval);
+                    setBotStage("error");
+                },
+                stop() {
+                    if (stageInterval) clearInterval(stageInterval);
+                    setBotStage("idle");
+                }
+            };
+        }
+
+        // Set initial idle state
+        setBotStage("idle");
+
+        // ---------- initial setup ----------
         if (!convos.length) createConversation();
         renderConvos();
         renderMessages();
 
-        // ---------- helpers ----------
+        // ---------- persistence helpers ----------
         function saveConvos() {
             try {
                 localStorage.setItem(CONVO_KEY, JSON.stringify(convos.slice(0, MAX_CONVOS)));
@@ -123,6 +222,7 @@
             saveConvos();
         }
 
+        // ---------- render bookshelf ----------
         function renderConvos(query = "") {
             if (!convos.length) { createConversation(); return; }
             const list = query
@@ -175,6 +275,7 @@
             });
         }
 
+        // ---------- render messages ----------
         function renderMessages() {
             const c = convos.find(x => x.id === activeId);
             if (!c) { messages.innerHTML = ""; return; }
@@ -194,6 +295,7 @@
             });
         }
 
+        // ---------- info strip ----------
         function updateShelfInfo() {
             if (!shelfInfo) return;
             const c = convos.find(x => x.id === activeId);
@@ -207,7 +309,6 @@
             const count = c.messages.length;
             const updated = new Date(c.updatedAt).toLocaleString();
 
-            // Keep input in sync unless user is currently editing
             if (chatTitleInput && document.activeElement !== chatTitleInput) {
                 chatTitleInput.value = c.title || "New chat";
             }
@@ -226,7 +327,7 @@
             });
         }
 
-        // ---------- title input + delete button ----------
+        // ---------- title input + delete ----------
         function renameActiveFromInput() {
             if (!chatTitleInput || !activeId) return;
             const val = chatTitleInput.value.trim();
@@ -282,33 +383,7 @@
             }
         }, { passive: false });
 
-        // ---------- Submit handler (calls backend) ----------
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const text = input.value.trim();
-            if (!text) return;
-
-            // Optimistic UI: add user message
-            appendMessage("user", text);
-            addMessage(text, "me");
-            input.value = "";
-            autoResize();
-
-            // Add a placeholder assistant bubble we can update
-            const placeholder = addMessage("...", "bot", /*returnEl*/ true);
-
-            try {
-                const reply = await sendToBackend(text);
-                // Save & render assistant message
-                appendMessage("assistant", reply);
-                placeholder.textContent = "";
-                streamBotReplyInto(placeholder, reply); // type-on effect
-            } catch (err) {
-                const msg = (err && err.message) ? err.message : "Network error.";
-                placeholder.textContent = `⚠️ ${msg}`;
-            }
-        });
-
+        // ---------- message helpers ----------
         function addMessage(text, who = "bot", returnEl = false) {
             const div = document.createElement("div");
             div.className = "msg" + (who === "me" ? " me" : "");
@@ -318,6 +393,27 @@
                 messages.scrollTop = messages.scrollHeight;
             });
             return returnEl ? div : undefined;
+        }
+
+        // Typing animation for reply text in chat area
+        function streamBotReplyInto(div, fullText) {
+            if (!div) return;
+            let i = 0;
+            const step = 1;
+            const delayMs = 15;
+
+            const tick = () => {
+                i += step;
+                div.textContent = fullText.slice(0, i);
+                messages.scrollTop = messages.scrollHeight;
+                if (i < fullText.length) {
+                    setTimeout(tick, delayMs);
+                } else {
+                    resetBotStageToIdleLater();
+                }
+            };
+
+            tick();
         }
 
         // ---------- API call ----------
@@ -336,25 +432,44 @@
             return data.reply || "";
         }
 
-        const TYPING_STEP_TARGET = 80;
-        function streamBotReplyInto(div, fullText) {
-            let i = 0;
-            const step = 1; // 1 char at a time
+        // ---------- Submit handler (uses bgpanel stage + typing) ----------
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
 
-            const tick = () => {
-                i += step;
-                div.textContent = fullText.slice(0, i);
-                messages.scrollTop = messages.scrollHeight;
-                if (i < fullText.length) {
-                    requestAnimationFrame(tick);
-                }
-            };
+            // Optimistic UI: add user message
+            appendMessage("user", text);
+            addMessage(text, "me");
+            input.value = "";
+            autoResize();
 
-            requestAnimationFrame(tick);
-        }
+            // Start librarian animation (waiting -> thinking)
+            const stage = startBotStageCycle();
 
+            // Placeholder assistant bubble we'll type into
+            const placeholder = addMessage("", "bot", true);
 
-        // Optional keyboard nav across books
+            try {
+                const reply = await sendToBackend(text);
+
+                // store in history
+                appendMessage("assistant", reply);
+
+                // librarian goes to "writing" mode
+                stage.toWriting();
+
+                // type text into placeholder
+                streamBotReplyInto(placeholder, reply);
+            } catch (err) {
+                const msg = (err && err.message) ? err.message : "Network error.";
+                stage.showError();
+                placeholder.textContent = `⚠️ ${msg}`;
+                resetBotStageToIdleLater();
+            }
+        });
+
+        // ---------- bookshelf keyboard nav ----------
         shelf.addEventListener("keydown", (e) => {
             if (!["ArrowLeft", "ArrowRight"].includes(e.key)) return;
             const books = [...shelf.querySelectorAll(".book")];
@@ -366,6 +481,7 @@
             books[next]?.scrollIntoView({ behavior: "smooth", inline: "center" });
         });
 
+        // ---------- debounce helper ----------
         function debounceRAF(fn, delayMs = 0) {
             let t = 0, rAF = 0;
             return (...args) => {

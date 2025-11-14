@@ -269,10 +269,10 @@ body {
 .bgpanel {
     justify-self: center;
     width: 92%;
-    min-height: 220px; /* adjust to taste: 180–260px */
+    min-height: 220px;
     border: 1px solid var(--border);
     border-radius: 12px;
-    background: url("Images/library-bg.png") center 85% / cover no-repeat, #3a2f28;
+    background: url("Images/temp-idle.png") center 85% / cover no-repeat, #3a2f28;
     display: grid;
     place-items: center;
     position: relative;
@@ -286,6 +286,36 @@ body {
         border-radius: 10px;
         box-shadow: inset 0 0 0 3px rgba(241,184,102,0.25);
         pointer-events: none;
+    }
+
+/* New: little status pill in bottom-left of bgpanel */
+.bgpanelStage {
+    position: absolute;
+    left: 14px;
+    bottom: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: rgba(15, 10, 6, 0.8);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+}
+
+.bgpanelStage__icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 10px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.bgpanelStage__text {
+    font-size: 0.85rem;
+    color: var(--text);
+}
+pointer-events: none;
     }
 
 /* Hide any legacy vertical list */
