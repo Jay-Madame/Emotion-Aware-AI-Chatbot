@@ -37,6 +37,9 @@ pip install -r docs/backend_requirements.txt
 
 ```bash
 uvicorn src.server:app --host 0.0.0.0 --port 8000 --reload
+Gave me issues later on after running it several times. This got it to run if this command gives you errors
+python -m uvicorn server:app --reload
+
 In another Terminal
 python -m http.server 5173
 
