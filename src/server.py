@@ -6,7 +6,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 # Your existing router
-from sentiment_bot import route_by_sentiment
+from .sentiment_bot import route_by_sentiment
 
 load_dotenv()
 
