@@ -169,7 +169,7 @@ body {
     transform: translate(-50%, -10px);
 }
 
-/* “New chat” book */
+/* New chat book */
 .book--new {
     background: repeating-linear-gradient(90deg, rgba(241,184,102,.25) 0 2px, transparent 2px 6px), #3e2f26;
     border-style: dashed;
@@ -315,8 +315,6 @@ body {
     font-size: 0.85rem;
     color: var(--text);
 }
-pointer-events: none;
-    }
 
 /* Hide any legacy vertical list */
 .convos {
