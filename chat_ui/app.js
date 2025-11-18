@@ -9,7 +9,7 @@
     const SUBMIT_THROTTLE_MS = 120;
     const now = () => Date.now();
 
-    const BACKEND_URL = "http://localhost:8000/chat";
+    const BACKEND_URL = "https://emotionalcounselingchatbot.com";
 
     function uuid() {
         if (crypto && crypto.randomUUID) return crypto.randomUUID();
