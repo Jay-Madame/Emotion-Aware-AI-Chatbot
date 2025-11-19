@@ -4,12 +4,27 @@
 // - Horizontal "bookshelf" convo picker with tooltips, search, top +New
 // - Bot stage animation in bottom-left bgpanel (waiting -> thinking -> writing)
 (() => {
+    /*
     const CONVO_KEY = "chatui_convos_v2";
     const MAX_CONVOS = 50;
     const SUBMIT_THROTTLE_MS = 120;
     const now = () => Date.now();
 
-    const BACKEND_URL = "https://emotionalcounselingchatbot.com";
+    //const BACKEND_URL = "https://emotionalcounselingchatbot.com";
+    const BACKEND_URL = "http://localhost:8000"
+
+    */
+    const CONVO_KEY = "chatui_convos_v2";
+    const MAX_CONVOS = 50;
+    const SUBMIT_THROTTLE_MS = 120;
+    const now = () => Date.now();
+
+    // Base API URL (switch these depending on where you're running)
+    const API_BASE = "http://localhost:8000";
+    // const API_BASE = "https://emotionalcounselingchatbot.com";
+
+    // Full chat endpoint
+    const CHAT_URL = `${API_BASE}/chat`;
 
     function uuid() {
         if (crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -418,7 +433,7 @@
 
         // ---------- API call ----------
         async function sendToBackend(userText) {
-            const res = await fetch(BACKEND_URL, {
+            const res = await fetch(CHAT_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ message: userText }),
@@ -431,6 +446,7 @@
             const data = await res.json();
             return data.reply || "";
         }
+
 
         // ---------- Submit handler (uses bgpanel stage + typing) ----------
         form.addEventListener("submit", async (e) => {

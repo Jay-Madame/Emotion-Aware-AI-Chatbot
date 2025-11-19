@@ -1,0 +1,22 @@
+#version: "3.9"
+
+services:
+  backend:
+    build: .
+    container_name: chat-backend
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    # If you want live code reload in dev, we could add volumes here later
+
+  frontend:
+    image: nginx:alpine
+    container_name: chat-frontend
+    volumes:
+      # Serve the chat_ui folder as static files
+      - ./chat_ui:/usr/share/nginx/html:ro
+    ports:
+      - "8090:80"
+    depends_on:
+      - backend
