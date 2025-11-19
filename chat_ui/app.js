@@ -10,13 +10,14 @@
     const SUBMIT_THROTTLE_MS = 120;
     const now = () => Date.now();
 
-    // Backend base URL:
-    // - For deployed frontend + backend on the same origin: keep this as "".
-    // - For local dev with backend at http://localhost:8000, switch these lines.
-    // const API_BASE = "http://localhost:8000";
-    const API_BASE = "";
+    // Auto-detect environment:
+    // - On localhost (UI on 8090, backend on 8000) -> talk to http://localhost:8000
+    // - On deployed site -> use same-origin "" and call /chat on that domain
+    const isLocalhost =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1";
 
-    // Full chat endpoint
+    const API_BASE = isLocalhost ? "http://localhost:8000" : "";
     const CHAT_URL = `${API_BASE}/chat`;
 
     function uuid() {
@@ -71,8 +72,6 @@
         let lastSubmitAt = 0;
 
         // ---------- BOT SPRITE ANIMATION SETUP ----------
-        // Idle uses Wait1–4; thinking uses Think1–3.
-        // Writing temporarily reuses Wait frames until Write1–3 exist.
         const BOT_SPRITE_SEQUENCES = {
             idle: [
                 "Images/Wait1.png",
@@ -115,6 +114,7 @@
         let botFrameTimerId = null;
 
         function startBotFrameLoop() {
+            // If we don't have the stage text element, bail
             if (!botStageText) return;
 
             // clear any previous interval
