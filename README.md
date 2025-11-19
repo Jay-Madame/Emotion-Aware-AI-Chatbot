@@ -33,14 +33,15 @@ backend_venv\Scripts\activate
 pip install -r docs/backend_requirements.txt
 ```
 
-## 5. Run the front end integration with Backend API
+## 5. Integration with Backend API and Frontend web server
 
 ```bash
-uvicorn src.server:app --host 0.0.0.0 --port 8000 --reload
-Gave me issues later on after running it several times. This got it to run if this command gives you errors
-python -m uvicorn server:app --reload
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- A `.env` file in the project root
+In Project root as well, to build the stack:
+docker compose up --build
 
-In another Terminal
-python -m http.server 5173
-
+Open the fronten at:  http://localhost:8090
+When ctrl - c to end operation also:
+docker compose down
 ```
