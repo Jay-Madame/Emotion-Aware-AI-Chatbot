@@ -2,6 +2,8 @@
 import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
@@ -30,11 +32,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.mount(
+    "/",
+    StaticFiles(directory="chat_ui"),
+    name="static"
+)
+
 class ChatRequest(BaseModel):
     message: str
 
 class ChatResponse(BaseModel):
     reply: str
+
+@app.get("/", include_in_schema=False)
+async def serve_index():
+    with open(os.path.join("chat_ui", "index.html"), "r") as f:
+        html_content = f.read()
+    return HTMLResponse(content=html_content, status_code=200)
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
