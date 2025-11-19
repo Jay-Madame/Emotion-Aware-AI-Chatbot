@@ -4,25 +4,18 @@
 // - Horizontal "bookshelf" convo picker with tooltips, search, top +New
 // - Bot stage animation in bottom-left bgpanel (waiting -> thinking -> writing)
 (() => {
-    /*
+    
     const CONVO_KEY = "chatui_convos_v2";
     const MAX_CONVOS = 50;
     const SUBMIT_THROTTLE_MS = 120;
     const now = () => Date.now();
 
-    //const BACKEND_URL = "https://emotionalcounselingchatbot.com";
-    const BACKEND_URL = "http://localhost:8000"
-
-    */
-    const CONVO_KEY = "chatui_convos_v2";
-    const MAX_CONVOS = 50;
-    const SUBMIT_THROTTLE_MS = 120;
-    const now = () => Date.now();
-
-    // Base API URL (switch these depending on where you're running)
-    const API_BASE = "http://localhost:8000";
-    //const API_BASE = "https://emotionalcounselingchatbot.com";
-
+    // --- FIX APPLIED HERE ---
+    // The API_BASE is set to "" (empty string) so that the browser 
+    // uses the current deployed URL (e.g., https://your-app.onrender.com) 
+    // when requesting the /chat endpoint.
+    const API_BASE = ""; 
+    
     // Full chat endpoint
     const CHAT_URL = `${API_BASE}/chat`;
 
