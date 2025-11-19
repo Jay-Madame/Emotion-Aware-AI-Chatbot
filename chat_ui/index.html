@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Chat UI</title>
-    <link rel="stylesheet" href="styles.css?v=7" />
+    <link rel="stylesheet" href="styles.css?v=8" />
 </head>
 <body>
     <div class="app">
@@ -30,36 +30,36 @@
                 <div class="shelfInfo__main">
                     <div class="shelfInfo__titleRow">
                         <span class="shelfInfo__label">Active chat:</span>
-                        <input
-                            id="chatTitleInput"
-                            class="shelfInfo__titleInput"
-                            type="text"
-                            placeholder="New chat"
-                        />
+                        <input id="chatTitleInput"
+                               class="shelfInfo__titleInput"
+                               type="text"
+                               placeholder="New chat" />
                     </div>
                     <div id="shelfMeta" class="shelfInfo__meta"></div>
                 </div>
-                <button
-                    id="deleteChatBtn"
-                    class="iconBtn"
-                    type="button"
-                    title="Delete this chat"
-                    aria-label="Delete this chat"
-                >
+                <button id="deleteChatBtn"
+                        class="iconBtn"
+                        type="button"
+                        title="Delete this chat"
+                        aria-label="Delete this chat">
                     🗑
                 </button>
             </div>
 
             <!-- BOTTOM: Character / background stage -->
             <div class="bgpanel" aria-hidden="true">
+                <!-- Full-panel animated sprite -->
+                <img id="botPanelSprite"
+                     class="bgpanel__sprite"
+                     src="Images/Wait1.png"
+                     alt="" />
+
                 <!-- Little status overlay for waiting/thinking/writing -->
                 <div class="bgpanelStage">
-                    <img
-                        id="botStageImg"
-                        class="bgpanelStage__icon"
-                        src="Images/temp-idle.png"
-                        alt=""
-                    />
+                    <img id="botStageImg"
+                         class="bgpanelStage__icon"
+                         src="Images/Wait1.png"
+                         alt="" />
                     <span id="botStageText" class="bgpanelStage__text">Ready to chat</span>
                 </div>
             </div>
@@ -74,16 +74,14 @@
             <div class="right__messages" id="messages"></div>
 
             <form class="right__composer" id="composer">
-                <textarea
-                    id="input"
-                    rows="1"
-                    placeholder="Type a message… (Shift+Enter for newline)"
-                ></textarea>
+                <textarea id="input"
+                          rows="1"
+                          placeholder="Type a message… (Shift+Enter for newline)"></textarea>
                 <button type="submit" aria-label="Send">➤</button>
             </form>
         </main>
     </div>
 
-    <script src="app.js?v=10" defer></script>
+    <script src="app.js?v=11" defer></script>
 </body>
 </html>

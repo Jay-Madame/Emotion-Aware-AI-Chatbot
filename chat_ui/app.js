@@ -1,19 +1,10 @@
-﻿// ===================== app.js (full integration) =====================
+﻿// ===================== app.js (full integration with sprite sequences) =====================
 // - Slack-style sending: Enter=Send, Shift+Enter=newline
 // - Multi-conversation storage in localStorage
 // - Horizontal "bookshelf" convo picker with tooltips, search, top +New
-// - Bot stage animation in bottom-left bgpanel (waiting -> thinking -> writing)
+// - Bot sprite animation in bgpanel (idle -> thinking -> writing -> error)
+
 (() => {
-    /*
-    const CONVO_KEY = "chatui_convos_v2";
-    const MAX_CONVOS = 50;
-    const SUBMIT_THROTTLE_MS = 120;
-    const now = () => Date.now();
-
-    //const BACKEND_URL = "https://emotionalcounselingchatbot.com";
-    const BACKEND_URL = "http://localhost:8000"
-
-    */
     const CONVO_KEY = "chatui_convos_v2";
     const MAX_CONVOS = 50;
     const SUBMIT_THROTTLE_MS = 120;
@@ -23,7 +14,6 @@
     const API_BASE = "http://localhost:8000";
     // const API_BASE = "https://emotionalcounselingchatbot.com";
 
-    // Full chat endpoint
     const CHAT_URL = `${API_BASE}/chat`;
 
     function uuid() {
@@ -36,7 +26,11 @@
     }
 
     function safeParse(json, fallback) {
-        try { return JSON.parse(json); } catch { return fallback; }
+        try {
+            return JSON.parse(json);
+        } catch {
+            return fallback;
+        }
     }
 
     function loadConvos() {
@@ -59,9 +53,10 @@
         const form = document.getElementById("composer");
         const input = document.getElementById("input");
 
-        // NEW: bgpanel stage elements
-        const botStageImg = document.getElementById("botStageImg");
-        const botStageText = document.getElementById("botStageText");
+        // bgpanel elements
+        const botPanelSprite = document.getElementById("botPanelSprite"); // big panel image
+        const botStageImg = document.getElementById("botStageImg");       // small thumbnail in pill
+        const botStageText = document.getElementById("botStageText");     // status text
 
         if (!shelf || !messages || !form || !input) {
             console.error("Chat UI elements not found.");
@@ -72,97 +67,100 @@
         let activeId = (convos[0]?.id) || null;
         let lastSubmitAt = 0;
 
-        // ---------- bot stage controller ----------
-        let stageInterval = null;
+        // ---------- BOT SPRITE ANIMATION SETUP ----------
+        // Idle uses Wait1–4; thinking uses Think1–3.
+        // Writing temporarily reuses Wait frames until Write1–3 exist.
+        const BOT_SPRITE_SEQUENCES = {
+            idle: [
+                "Images/Wait1.png",
+                "Images/Wait2.png",
+                "Images/Wait3.png",
+                "Images/Wait4.png"
+            ],
+            thinking: [
+                "Images/Think1.png",
+                "Images/Think2.png",
+                "Images/Think3.png"
+            ],
+            writing: [
+                "Images/Wait1.png",
+                "Images/Wait2.png",
+                "Images/Wait3.png",
+                "Images/Wait4.png"
+            ],
+            error: [
+                "Images/Wait1.png"
+            ]
+        };
 
-        function setBotStage(stage, dots = 0) {
-            if (!botStageImg || !botStageText) return;
+        const BOT_STAGE_TEXT = {
+            idle: "Ready to chat",
+            thinking: "Thinking…",
+            writing: "Writing a reply…",
+            error: "Error talking to the server."
+        };
 
-            switch (stage) {
-                case "idle":
-                    botStageImg.src = "Images/temp-idle.png";   // adjust if needed
-                    botStageText.textContent = "Ready to chat";
-                    break;
-                case "waiting":
-                    botStageImg.src = "Images/temp-waiting.png";
-                    botStageText.textContent = "Waiting…";
-                    break;
-                case "thinking":
-                    botStageImg.src = "Images/temp-thinking.png";
-                    botStageText.textContent = "Thinking" + ".".repeat(dots);
-                    break;
-                case "writing":
-                    botStageImg.src = "Images/temp-writing.png";
-                    botStageText.textContent = "Writing a reply…";
-                    break;
-                case "error":
-                    botStageImg.src = "Images/temp-thinking.png"; // or a dedicated error icon
-                    botStageText.textContent = "Error talking to the server.";
-                    break;
+        const BOT_STAGE_FRAME_DELAY = {
+            idle: 650,
+            thinking: 260,
+            writing: 180,
+            error: 500
+        };
+
+        let botStage = "idle";
+        let botFrameIndex = 0;
+        let botFrameTimerId = null;
+
+        function startBotFrameLoop() {
+            if (!botStageText) return;
+
+            // clear any previous interval
+            if (botFrameTimerId) {
+                clearInterval(botFrameTimerId);
+                botFrameTimerId = null;
             }
 
-            console.log("setBotStage:", stage, dots); 
+            const seq = BOT_SPRITE_SEQUENCES[botStage] || [];
+            if (!seq.length) return;
+
+            botFrameIndex = 0;
+
+            // first frame
+            const first = seq[botFrameIndex];
+            if (botStageImg) botStageImg.src = first;
+            if (botPanelSprite) botPanelSprite.src = first;
+
+            const delay = BOT_STAGE_FRAME_DELAY[botStage] || 400;
+
+            botFrameTimerId = setInterval(() => {
+                botFrameIndex = (botFrameIndex + 1) % seq.length;
+                const frame = seq[botFrameIndex];
+                if (botStageImg) botStageImg.src = frame;
+                if (botPanelSprite) botPanelSprite.src = frame;
+            }, delay);
+        }
+
+        function setBotStage(stage) {
+            if (!BOT_SPRITE_SEQUENCES[stage]) {
+                stage = "idle";
+            }
+            botStage = stage;
+
+            if (botStageText) {
+                botStageText.textContent = BOT_STAGE_TEXT[stage] || "";
+            }
+
+            startBotFrameLoop();
+            console.log("setBotStage:", stage);
         }
 
         function resetBotStageToIdleLater() {
-            // After some delay, go back to idle so it doesn't stay on "writing" forever
             setTimeout(() => {
                 setBotStage("idle");
             }, 2000);
         }
 
-        function startBotStageCycle() {
-            if (!botStageImg || !botStageText) {
-                return {
-                    toWriting() { },
-                    showError() { },
-                    stop() { }
-                };
-            }
-
-            // Clear any previous animation
-            if (stageInterval) clearInterval(stageInterval);
-
-            let state = "waiting";
-            let dots = 0;
-            const startTime = Date.now();
-
-            setBotStage("waiting");
-
-            stageInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-
-                if (elapsed > 500 && state === "waiting") {
-                    state = "thinking";
-                    dots = 0;
-                } else if (state === "thinking") {
-                    dots = (dots + 1) % 4;
-                }
-
-                if (state === "waiting") {
-                    setBotStage("waiting");
-                } else if (state === "thinking") {
-                    setBotStage("thinking", dots);
-                }
-            }, 350);
-
-            return {
-                toWriting() {
-                    if (stageInterval) clearInterval(stageInterval);
-                    setBotStage("writing");
-                },
-                showError() {
-                    if (stageInterval) clearInterval(stageInterval);
-                    setBotStage("error");
-                },
-                stop() {
-                    if (stageInterval) clearInterval(stageInterval);
-                    setBotStage("idle");
-                }
-            };
-        }
-
-        // Set initial idle state
+        // initial state
         setBotStage("idle");
 
         // ---------- initial setup ----------
@@ -239,7 +237,10 @@
 
         // ---------- render bookshelf ----------
         function renderConvos(query = "") {
-            if (!convos.length) { createConversation(); return; }
+            if (!convos.length) {
+                createConversation();
+                return;
+            }
             const list = query
                 ? convos.filter(c => (c.title || "New chat").toLowerCase().includes(query))
                 : convos;
@@ -293,7 +294,10 @@
         // ---------- render messages ----------
         function renderMessages() {
             const c = convos.find(x => x.id === activeId);
-            if (!c) { messages.innerHTML = ""; return; }
+            if (!c) {
+                messages.innerHTML = "";
+                return;
+            }
 
             const frag = document.createDocumentFragment();
             for (const m of c.messages) {
@@ -424,6 +428,7 @@
                 if (i < fullText.length) {
                     setTimeout(tick, delayMs);
                 } else {
+                    // when text fully rendered, relax to idle after a moment
                     resetBotStageToIdleLater();
                 }
             };
@@ -440,15 +445,16 @@
             });
             if (!res.ok) {
                 let detail = "";
-                try { detail = (await res.json()).detail; } catch { }
+                try {
+                    detail = (await res.json()).detail;
+                } catch { }
                 throw new Error(detail || `HTTP ${res.status}`);
             }
             const data = await res.json();
             return data.reply || "";
         }
 
-
-        // ---------- Submit handler (uses bgpanel stage + typing) ----------
+        // ---------- Submit handler (uses sprite stages + typing) ----------
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const text = input.value.trim();
@@ -460,8 +466,8 @@
             input.value = "";
             autoResize();
 
-            // Start librarian animation (waiting -> thinking)
-            const stage = startBotStageCycle();
+            // bot goes into "thinking" animation as soon as user sends
+            setBotStage("thinking");
 
             // Placeholder assistant bubble we'll type into
             const placeholder = addMessage("", "bot", true);
@@ -472,14 +478,14 @@
                 // store in history
                 appendMessage("assistant", reply);
 
-                // librarian goes to "writing" mode
-                stage.toWriting();
+                // switch to "writing" animation while we type reply into bubble
+                setBotStage("writing");
 
                 // type text into placeholder
                 streamBotReplyInto(placeholder, reply);
             } catch (err) {
                 const msg = (err && err.message) ? err.message : "Network error.";
-                stage.showError();
+                setBotStage("error");
                 placeholder.textContent = `⚠️ ${msg}`;
                 resetBotStageToIdleLater();
             }

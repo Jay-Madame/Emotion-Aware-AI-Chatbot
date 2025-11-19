@@ -74,7 +74,8 @@ def check_mental_health_concerns(user_input: str) -> str:
 sentiment_analyzer = SentimentAnalyzer()
 
 # 5. Models for routed responses
-positive_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+#positive_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
+positive_model = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.7)
 negative_model = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.5)
 neutral_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
 
