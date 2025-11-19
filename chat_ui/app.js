@@ -14,6 +14,19 @@
     const API_BASE = "http://localhost:8000";
     // const API_BASE = "https://emotionalcounselingchatbot.com";
 
+    
+    const CONVO_KEY = "chatui_convos_v2";
+    const MAX_CONVOS = 50;
+    const SUBMIT_THROTTLE_MS = 120;
+    const now = () => Date.now();
+
+    // --- FIX APPLIED HERE ---
+    // The API_BASE is set to "" (empty string) so that the browser 
+    // uses the current deployed URL (e.g., https://your-app.onrender.com) 
+    // when requesting the /chat endpoint.
+    const API_BASE = ""; 
+    
+    // Full chat endpoint
     const CHAT_URL = `${API_BASE}/chat`;
 
     function uuid() {

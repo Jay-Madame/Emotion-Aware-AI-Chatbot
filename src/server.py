@@ -22,11 +22,12 @@ if not GOOGLE_API_KEY or not GROQ_API_KEY:
 app = FastAPI(title="Sentiment Chat API")
 
 # Adjust this for your frontend host/port in dev/prod
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "*").split(",")
+ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS = [s.strip() for s in ALLOWED_ORIGINS_STR.split(",")]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,     # e.g., ["http://localhost:5500", "http://127.0.0.1:5500"]
+    allow_origins=["*"],     # e.g., ["http://localhost:5500", "http://127.0.0.1:5500"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
