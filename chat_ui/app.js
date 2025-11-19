@@ -21,7 +21,7 @@
 
     // Base API URL (switch these depending on where you're running)
     const API_BASE = "http://localhost:8000";
-    // const API_BASE = "https://emotionalcounselingchatbot.com";
+    //const API_BASE = "https://emotionalcounselingchatbot.com";
 
     // Full chat endpoint
     const CHAT_URL = `${API_BASE}/chat`;
