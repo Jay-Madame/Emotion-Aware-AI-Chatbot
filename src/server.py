@@ -32,23 +32,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount(
-    "/",
-    StaticFiles(directory="chat_ui"),
-    name="static"
-)
-
 class ChatRequest(BaseModel):
     message: str
 
 class ChatResponse(BaseModel):
     reply: str
-
-@app.get("/", include_in_schema=False)
-async def serve_index():
-    with open(os.path.join("chat_ui", "index.html"), "r") as f:
-        html_content = f.read()
-    return HTMLResponse(content=html_content, status_code=200)
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
@@ -61,3 +49,9 @@ def chat(req: ChatRequest):
     except Exception as e:
         # Log in real life
         raise HTTPException(status_code=500, detail=str(e))
+ 
+app.mount(
+    "/",
+    StaticFiles(directory="chat_ui", html=True),
+    name="static"
+)
