@@ -28,7 +28,7 @@ body {
 }
 
 /* ================================================== */
-/* --- LOGIN OVERLAY STYLES --- */
+/* --- LOGIN OVERLAY STYLES (KEPT) --- */
 /* ================================================== */
 #loginOverlay {
     position: fixed;
@@ -159,7 +159,7 @@ body {
 }
 
 /* ================================================== */
-/* --- MAIN CHAT UI STYLES --- */
+/* --- MAIN CHAT UI STYLES (REVERTED TO ORIGINAL) --- */
 /* ================================================== */
 
 /* Layout: 2/7 + 5/7 */
@@ -481,25 +481,18 @@ body {
     color: var(--text);
 }
 
-/* --- UPDATED MESSAGE CONTAINER FOR CENTERING --- */
 .right__messages {
     overflow: auto;
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 12px;
     background: rgba(255,233,200,0.03);
-
-    /* Flexbox properties for centering children (messages) */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Centers all messages horizontally */
+    /* No flex centering here, reverting to block flow */
 }
-/* ------------------------------------------------ */
 
 .msg {
     max-width: 72ch;
-    width: fit-content; /* Allows bubble to shrink to content size */
-    margin: 0 0 10px 0;
+    margin: 0 0 10px 0; /* Bot messages default to left align */
     padding: 10px 12px;
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -508,9 +501,7 @@ body {
 }
 
     .msg.me {
-        /* Overrides parent center alignment to align user messages right */
-        align-self: flex-end; 
-        
+        margin-left: auto; /* Pushes user messages to the right */
         background: var(--bubble-me);
         color: #2a241f;
         border-color: var(--bubble-me-border);
