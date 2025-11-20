@@ -41,5 +41,5 @@ jobs:
       env:
         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        AUTH_USERNAME: ${{secrets.AUTH_USERNAME}}
-        AUTH_PASSWORD: ${{secrets.AUTH_PASSWORD}}
+        AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
+        AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
