@@ -27,6 +27,141 @@ body {
     background: var(--bg);
 }
 
+/* ================================================== */
+/* --- LOGIN OVERLAY STYLES --- */
+/* ================================================== */
+#loginOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(27, 23, 19, 0.95); /* Dark background with opacity, matching --bg */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.login-card {
+    background: var(--panel);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+.login-card h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 5px;
+}
+
+.login-card h3 {
+    font-size: 18px;
+    color: var(--muted);
+    margin-bottom: 25px;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.login-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: var(--text);
+    margin-top: 15px;
+}
+
+.login-form input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
+    background: #3a2f28; /* Darker input background */
+    color: var(--text);
+}
+
+.login-form input:focus {
+    border-color: var(--accent);
+    outline: none;
+}
+
+.login-form button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 30px;
+    background-color: var(--accent);
+    color: #3b2b18; /* Dark text on accent */
+    border: none;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.login-form button:hover {
+    background-color: #e5a954; /* Slightly darker accent */
+}
+
+.login-form button:disabled {
+    background-color: #6d6153;
+    cursor: not-allowed;
+}
+
+.credentials-info {
+    background-color: #3a2f28; /* Dark background for info */
+    border-left: 4px solid var(--accent);
+    padding: 15px;
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 20px;
+}
+
+.credentials-info code {
+    font-weight: 600;
+    background: #4a3a30;
+    padding: 2px 4px;
+    border-radius: 3px;
+    color: var(--accent);
+}
+
+/* Status Messages */
+.status-message {
+    height: 20px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    text-align: center;
+    color: var(--text);
+}
+
+.status-loading {
+    color: var(--accent);
+}
+
+.status-success {
+    color: #8ac926; /* Green for success */
+    font-weight: 600;
+}
+
+.status-error {
+    color: #f72585; /* Pink/Red for error */
+    font-weight: 600;
+}
+
+/* ================================================== */
+/* --- MAIN CHAT UI STYLES --- */
+/* ================================================== */
+
 /* Layout: 2/7 + 5/7 */
 .app {
     display: grid;
