@@ -1,9 +1,12 @@
-﻿// ===================== app.js (full integration with sprite sequences) =====================
+﻿// ===================== app.js (JWT Authentication Version) =====================
+// - Uses JWT tokens stored in localStorage from login.html
+// - Redirects to login.html if not authenticated
 // - Slack-style sending: Enter=Send, Shift+Enter=newline
 // - Multi-conversation storage in localStorage
 // - Horizontal "bookshelf" convo picker with tooltips, search, top +New
 // - Bot sprite animation in bgpanel (idle -> thinking -> writing -> error)
-// - NEW: AUTHENTICATION LOGIN OVERLAY HANDLING
+
+console.log('App.js loaded - Starting initialization...');
 
 (() => {
     const CONVO_KEY = "chatui_convos_v2";
@@ -18,9 +21,6 @@
 
     const API_BASE = isLocalhost ? "http://localhost:8000" : "";
     const CHAT_URL = `${API_BASE}/chat`;
-
-    // --- NEW: Global Auth Header ---
-    let authHeader = null;
 
     function uuid() {
         if (crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -45,7 +45,7 @@
         return Array.isArray(arr) ? arr : [];
     }
     
-    // ---------- debounce helper (kept outside init for clarity) ----------
+    // ---------- debounce helper ----------
     function debounceRAF(fn, delayMs = 0) {
         let t = 0, rAF = 0;
         return (...args) => {
@@ -57,9 +57,99 @@
         };
     }
 
+    // ---------- Authentication Check ----------
+    function checkAuth() {
+        const token = localStorage.getItem('access_token');
+        const userId = localStorage.getItem('user_id');
+        
+        if (!token || !userId) {
+            // Redirect to login if not authenticated
+            window.location.href = 'login.html';
+            return false;
+        }
+        return true;
+    }
+
+    // ---------- Load Chat History from Database ----------
+    async function loadChatHistoryFromDB() {
+        const userId = localStorage.getItem('user_id');
+        if (!userId) return;
+
+        try {
+            const response = await fetch(`${API_BASE}/chat/history/${userId}?limit=50`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                console.warn('Could not load chat history from database');
+                return;
+            }
+
+            const data = await response.json();
+            console.log(`📚 Loaded ${data.messages.length} messages from database`);
+
+            // Convert database messages to conversations
+            // Group messages into a single conversation for now
+            if (data.messages.length > 0) {
+                const existingConvo = convos.find(c => c.title === "Previous Chats");
+                
+                if (!existingConvo) {
+                    // Create a conversation from database history
+                    const dbConvo = {
+                        id: "db-history",
+                        title: "Previous Chats",
+                        createdAt: new Date(data.messages[data.messages.length - 1].timestamp).getTime(),
+                        updatedAt: new Date(data.messages[0].timestamp).getTime(),
+                        messages: []
+                    };
+
+                    // Add messages in chronological order (oldest first)
+                    data.messages.reverse().forEach(msg => {
+                        dbConvo.messages.push({
+                            role: "user",
+                            text: msg.message
+                        });
+                        dbConvo.messages.push({
+                            role: "assistant",
+                            text: msg.response
+                        });
+                    });
+
+                    convos.unshift(dbConvo); // Add to beginning
+                    saveConvos();
+                    console.log('Created conversation from database history');
+                }
+            }
+        } catch (error) {
+            console.error('Error loading chat history:', error);
+        }
+    }
+
+    // ---------- Logout Function ----------
+    function logout() {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_id');
+        localStorage.removeItem('username');
+        localStorage.removeItem('email');
+        window.location.href = 'login.html';
+    }
+
     document.addEventListener("DOMContentLoaded", init, { once: true });
 
     function init() {
+        console.log('🔍 Init function called');
+        
+        // Check authentication first
+        if (!checkAuth()) {
+            console.log('Authentication check failed, should redirect');
+            return;
+        }
+        
+        console.log('Authentication passed');
+
         const shelf = document.getElementById("convoShelf");
         const chatSearch = document.getElementById("chatSearch");
         const newChatTop = document.getElementById("newChatTop");
@@ -71,28 +161,92 @@
         const form = document.getElementById("composer");
         const input = document.getElementById("input");
 
-        // bgpanel elements
-        const botPanelSprite = document.getElementById("botPanelSprite"); // big panel image
-        const botStageImg = document.getElementById("botStageImg");       // small thumbnail in pill
-        const botStageText = document.getElementById("botStageText");     // status text
-        
-        // --- NEW: Login Overlay Elements ---
-        const loginOverlay = document.getElementById("loginOverlay");
-        const mainAppContainer = document.getElementById("mainAppContainer");
-        const loginForm = document.getElementById("loginForm");
-        const usernameInput = document.getElementById("username");
-        const passwordInput = document.getElementById("password");
-        const loginButton = document.getElementById("loginButton");
-        const statusMessage = document.getElementById("statusMessage");
+        console.log('📦 Elements found:', {
+            shelf: !!shelf,
+            messages: !!messages,
+            form: !!form,
+            input: !!input
+        });
 
-        if (!shelf || !messages || !form || !input || !loginOverlay || !mainAppContainer || !loginForm) {
+        // bgpanel elements
+        const botPanelSprite = document.getElementById("botPanelSprite");
+        const botStageImg = document.getElementById("botStageImg");
+        const botStageText = document.getElementById("botStageText");
+
+        if (!shelf || !messages || !form || !input) {
             console.error("Chat UI elements not found.");
             return;
         }
+        
+        console.log('All required elements found, continuing initialization...');
 
-        let convos = []; // Start empty, will be loaded on successful login
+        // ---------- User Menu Setup ----------
+        const userMenuButton = document.getElementById('userMenuButton');
+        const userMenuDropdown = document.getElementById('userMenuDropdown');
+        const userMenuName = document.getElementById('userMenuName');
+        const userMenuEmail = document.getElementById('userMenuEmail');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+        // Set user info
+        const username = localStorage.getItem('username') || 'User';
+        const email = localStorage.getItem('email') || '';
+        if (userMenuName) userMenuName.textContent = username;
+        if (userMenuEmail) userMenuEmail.textContent = email;
+
+        // Toggle dropdown
+        if (userMenuButton && userMenuDropdown) {
+            userMenuButton.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userMenuDropdown.classList.toggle('active');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!userMenuDropdown.contains(e.target) && !userMenuButton.contains(e.target)) {
+                    userMenuDropdown.classList.remove('active');
+                }
+            });
+        }
+
+        // Logout handler
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to logout?')) {
+                    logout();
+                }
+            });
+        }
+
+        // Change password handler
+        if (changePasswordBtn) {
+            changePasswordBtn.addEventListener('click', () => {
+                userMenuDropdown.classList.remove('active');
+                window.location.href = 'change-password.html';
+            });
+        }
+
+        // Hide login overlay and show main app (if index.html still has overlay)
+        const loginOverlay = document.getElementById("loginOverlay");
+        const mainAppContainer = document.getElementById("mainAppContainer");
+        if (loginOverlay) loginOverlay.style.display = 'none';
+        if (mainAppContainer) mainAppContainer.style.display = 'grid';
+
+        let convos = loadConvos();
         let activeId = null;
         let lastSubmitAt = 0;
+
+        // Load chat history from database
+        loadChatHistoryFromDB().then(() => {
+            console.log('Chat history loaded from database');
+            if (convos.length === 0) {
+                createConversation();
+            } else {
+                activeId = convos[0].id;
+                renderConvos();
+                renderMessages();
+            }
+        });
 
         // ---------- BOT SPRITE ANIMATION SETUP ----------
         const BOT_SPRITE_SEQUENCES = {
@@ -174,7 +328,6 @@
             }
 
             startBotFrameLoop();
-            // console.log("setBotStage:", stage);
         }
 
         function resetBotStageToIdleLater() {
@@ -186,229 +339,125 @@
         // initial state
         setBotStage("idle");
 
-        // ---------- NEW: AUTHENTICATION FUNCTIONS ----------
-
-        // Set the computed Basic Auth header
-        function setAuthHeader(username, password) {
-            const encoded = btoa(`${username}:${password}`);
-            authHeader = `Basic ${encoded}`;
-        }
-        
-        // Simulates a chat request with a dummy message to quickly test credentials
-        async function checkAuth(username, password) {
-            setAuthHeader(username, password); // Temporarily set to test
-            
-            try {
-                // Use a minimal message to check credentials
-                const res = await fetch(CHAT_URL, {
-                    method: "POST",
-                    headers: { 
-                        "Content-Type": "application/json",
-                        "Authorization": authHeader // Send the Auth header
-                    },
-                    body: JSON.stringify({ message: "Test Auth" }),
-                });
-
-                if (res.status === 401) {
-                    throw new Error("Invalid credentials.");
-                }
-                
-                if (!res.ok) {
-                    let detail = "";
-                    try { detail = (await res.json()).detail; } catch { }
-                    throw new Error(detail || `Server error: HTTP ${res.status}`);
-                }
-                // AuthHeader is now correctly set globally
-                return true; 
-            } catch (err) {
-                authHeader = null; // Clear the header on failure
-                throw err;
-            }
-        }
-
-        async function handleLogin(e) {
-            e.preventDefault();
-            
-            const username = usernameInput.value.trim();
-            const password = passwordInput.value;
-            
-            if (!username || !password) {
-                statusMessage.textContent = "Please enter both username and password.";
-                statusMessage.classList.add("error");
-                return;
-            }
-
-            loginButton.disabled = true;
-            statusMessage.textContent = "Logging in...";
-            statusMessage.classList.remove("error");
-
-            try {
-                await checkAuth(username, password);
-                
-                // Login Success
-                statusMessage.textContent = "Login successful! Starting chat.";
-                
-                // Load and render chat state (Initialization logic)
-                convos = loadConvos();
-                activeId = (convos[0]?.id) || null;
-                if (!convos.length) createConversation();
-                renderConvos();
-                renderMessages();
-
-                // Show main app and hide login overlay
-                loginOverlay.style.display = 'none';
-                mainAppContainer.style.display = 'flex';
-                input.focus(); // Focus the chat input
-            } catch (err) {
-                // Login Failure
-                statusMessage.textContent = `Login Failed: ${err.message || 'Network error.'}`;
-                statusMessage.classList.add("error");
-                console.error("Login attempt failed:", err);
-            } finally {
-                loginButton.disabled = false;
-            }
-        }
-        
-        loginForm.addEventListener("submit", handleLogin);
-
-        // ---------- persistence helpers ----------
+        // ---------- conversation management ----------
         function saveConvos() {
             try {
-                localStorage.setItem(CONVO_KEY, JSON.stringify(convos.slice(0, MAX_CONVOS)));
-            } catch (e) {
-                console.warn("localStorage save failed:", e);
+                const sorted = [...convos].sort((a, b) => b.updatedAt - a.updatedAt);
+                const trimmed = sorted.slice(0, MAX_CONVOS);
+                localStorage.setItem(CONVO_KEY, JSON.stringify(trimmed));
+                convos = trimmed;
+            } catch (err) {
+                console.error("saveConvos error:", err);
             }
         }
 
-        function createConversation(title = "New chat") {
+        function findConvo(id) {
+            return convos.find(c => c.id === id);
+        }
+
+        function createConversation(firstMessage = "") {
             const id = uuid();
-            const convo = { id, title, createdAt: now(), updatedAt: now(), messages: [] };
-            convos = [convo, ...convos].slice(0, MAX_CONVOS);
-            activeId = id;
+            const c = {
+                id,
+                title: "New chat",
+                createdAt: now(),
+                updatedAt: now(),
+                messages: []
+            };
+            if (firstMessage) {
+                c.messages.push({ role: "user", text: firstMessage });
+            }
+            convos.push(c);
             saveConvos();
+            switchTo(id);
+        }
+
+        function switchTo(id) {
+            activeId = id;
             renderConvos();
             renderMessages();
-            return id;
-        }
-
-        function setActiveConversation(id) {
-            activeId = id;
-            renderConvos(chatSearch?.value.trim().toLowerCase() || "");
-            renderMessages();
-        }
-
-        function renameConversation(id, title) {
-            const c = convos.find(x => x.id === id);
-            if (!c) return;
-            const trimmed = (title || "").trim();
-            if (trimmed) {
-                c.title = trimmed;
-            }
-            c.updatedAt = now();
-            saveConvos();
-            renderConvos(chatSearch?.value.trim().toLowerCase() || "");
-            updateShelfInfo();
         }
 
         function deleteConversation(id) {
-            const i = convos.findIndex(x => x.id === id);
-            if (i >= 0) {
-                convos.splice(i, 1);
-                if (activeId === id) {
-                    activeId = convos[0]?.id || null;
-                    if (!activeId) {
-                        createConversation();
-                    }
-                }
-                saveConvos();
-                renderConvos(chatSearch?.value.trim().toLowerCase() || "");
-                renderMessages();
+            convos = convos.filter(c => c.id !== id);
+            saveConvos();
+
+            if (activeId === id) {
+                activeId = convos.length > 0 ? convos[0].id : null;
             }
+            renderConvos();
+            renderMessages();
+        }
+
+        function renameConversation(id, newTitle) {
+            const c = findConvo(id);
+            if (!c) return;
+            c.title = newTitle;
+            c.updatedAt = now();
+            saveConvos();
+            renderConvos();
+            updateShelfInfo();
         }
 
         function appendMessage(role, text) {
-            const c = convos.find(x => x.id === activeId) || convos[0];
+            const c = findConvo(activeId);
             if (!c) return;
-            c.messages.push({ id: uuid(), role, text, ts: now() });
+            c.messages.push({ role, text });
             c.updatedAt = now();
-            if (role === "user" && (!c.title || c.title === "New chat") && c.messages.length === 1) {
-                const t = text.trim().replace(/\s+/g, " ").slice(0, 40);
-                c.title = t || "New chat";
-            }
             saveConvos();
         }
 
-        // ---------- render bookshelf ----------
-        function renderConvos(query = "") {
-            if (!convos.length) {
-                // This shouldn't happen after successful login, but safe guard
-                createConversation(); 
-                return;
-            }
-            const list = query
-                ? convos.filter(c => (c.title || "New chat").toLowerCase().includes(query))
-                : convos;
-
+        // ---------- bookshelf render ----------
+        function renderConvos(filterStr = "") {
             const frag = document.createDocumentFragment();
 
-            const newBook = document.createElement("div");
-            newBook.className = "book book--new";
-            newBook.title = "New chat";
-            newBook.setAttribute("aria-label", "New chat");
-            newBook.addEventListener("click", () => createConversation());
-            frag.appendChild(newBook);
+            const filtered = filterStr
+                ? convos.filter(c => c.title.toLowerCase().includes(filterStr))
+                : convos;
 
-            list.forEach(c => {
-                const book = document.createElement("div");
-                book.className = "book" + (c.id === activeId ? " active" : "");
-                book.dataset.id = c.id;
-                book.setAttribute("role", "button");
-                book.setAttribute("tabindex", "0");
-                book.setAttribute("aria-label", c.title || "New chat");
+            const sorted = [...filtered].sort((a, b) => b.updatedAt - a.updatedAt);
+
+            sorted.forEach(c => {
+                const div = document.createElement("div");
+                div.className = "book";
+                if (c.id === activeId) div.classList.add("active");
 
                 const band = document.createElement("div");
                 band.className = "book__band";
-                book.appendChild(band);
+                div.appendChild(band);
 
                 const tt = document.createElement("div");
                 tt.className = "book__tt";
                 tt.textContent = c.title || "New chat";
-                book.appendChild(tt);
+                div.appendChild(tt);
 
-                book.addEventListener("click", () => setActiveConversation(c.id));
-                book.addEventListener("dblclick", () => {
-                    const val = prompt("Rename chat:", c.title || "New chat");
-                    if (val != null) renameConversation(c.id, val);
-                });
-                book.addEventListener("contextmenu", (e) => {
-                    e.preventDefault();
-                    if (confirm("Delete this conversation?")) deleteConversation(c.id);
-                });
-
-                frag.appendChild(book);
+                div.addEventListener("click", () => switchTo(c.id));
+                frag.appendChild(div);
             });
+
+            // "+New" book
+            const newBook = document.createElement("div");
+            newBook.className = "book book--new";
+            newBook.addEventListener("click", () => createConversation());
+            frag.appendChild(newBook);
 
             requestAnimationFrame(() => {
                 shelf.innerHTML = "";
                 shelf.appendChild(frag);
-                updateShelfInfo();
             });
         }
 
-        // ---------- render messages ----------
+        // ---------- message render ----------
         function renderMessages() {
-            const c = convos.find(x => x.id === activeId);
-            if (!c) {
-                messages.innerHTML = "";
-                return;
-            }
-
+            const c = findConvo(activeId);
             const frag = document.createDocumentFragment();
-            for (const m of c.messages) {
-                const div = document.createElement("div");
-                div.className = "msg" + (m.role === "user" ? " me" : "");
-                div.textContent = m.text;
-                frag.appendChild(div);
+            if (c) {
+                for (const m of c.messages) {
+                    const div = document.createElement("div");
+                    div.className = "msg" + (m.role === "user" ? " me" : "");
+                    div.textContent = m.text;
+                    frag.appendChild(div);
+                }
             }
             requestAnimationFrame(() => {
                 messages.innerHTML = "";
@@ -421,7 +470,7 @@
         // ---------- info strip ----------
         function updateShelfInfo() {
             if (!shelfInfo) return;
-            const c = convos.find(x => x.id === activeId);
+            const c = findConvo(activeId);
             if (!c) {
                 if (chatTitleInput && document.activeElement !== chatTitleInput) {
                     chatTitleInput.value = "";
@@ -518,7 +567,7 @@
             return returnEl ? div : undefined;
         }
 
-        // Typing animation for reply text in chat area
+        // Typing animation for reply text
         function streamBotReplyInto(div, fullText) {
             if (!div) return;
             let i = 0;
@@ -532,7 +581,6 @@
                 if (i < fullText.length) {
                     setTimeout(tick, delayMs);
                 } else {
-                    // when text fully rendered, relax to idle after a moment
                     resetBotStageToIdleLater();
                 }
             };
@@ -540,28 +588,40 @@
             tick();
         }
 
-        // ---------- API call (UPDATED for global authHeader) ----------
+        // ---------- API call with JWT ----------
         async function sendToBackend(userText) {
-            // Should be set on successful login
-            if (!authHeader) {
-                throw new Error("Authentication session lost. Please reload and log in.");
+            const userId = localStorage.getItem('user_id');
+            
+            if (!userId) {
+                throw new Error("User session lost. Please log in again.");
             }
+
+            // Build chat history from current conversation
+            const c = findConvo(activeId);
+            const chatHistory = c ? c.messages.map(m => ({
+                role: m.role === "user" ? "user" : "assistant",
+                content: m.text
+            })) : [];
 
             const res = await fetch(CHAT_URL, {
                 method: "POST",
                 headers: { 
-                    "Content-Type": "application/json",
-                    "Authorization": authHeader // Use the global stored header
+                    "Content-Type": "application/json"
                 },
-                body: JSON.stringify({ message: userText }),
+                body: JSON.stringify({ 
+                    message: userText,
+                    user_id: parseInt(userId),
+                    chat_history: chatHistory
+                }),
             });
 
-            if (res.status === 401) {
-                // If the session somehow expires, force a re-login
-                loginOverlay.style.display = 'flex';
-                mainAppContainer.style.display = 'none';
-                authHeader = null;
+            if (res.status === 401 || res.status === 403) {
+                logout();
                 throw new Error("Authentication expired. Please log in again.");
+            }
+            
+            if (res.status === 404) {
+                throw new Error("User not found. Please log in again.");
             }
             
             if (!res.ok) {
@@ -575,11 +635,16 @@
             return data.reply || "";
         }
 
-        // ---------- Submit handler (uses sprite stages + typing) ----------
+        // ---------- Submit handler ----------
         form.addEventListener("submit", async (e) => {
             e.preventDefault();
             const text = input.value.trim();
             if (!text) return;
+
+            // Create conversation if needed
+            if (!activeId || !findConvo(activeId)) {
+                createConversation();
+            }
 
             // Optimistic UI: add user message
             appendMessage("user", text);
@@ -587,27 +652,19 @@
             input.value = "";
             autoResize();
 
-            // bot goes into "thinking" animation as soon as user sends
             setBotStage("thinking");
 
-            // Placeholder assistant bubble we'll type into
             const placeholder = addMessage("", "bot", true);
 
             try {
                 const reply = await sendToBackend(text);
-
-                // store in history
                 appendMessage("assistant", reply);
-
-                // switch to "writing" animation while we type reply into bubble
                 setBotStage("writing");
-
-                // type text into placeholder
                 streamBotReplyInto(placeholder, reply);
             } catch (err) {
                 const msg = (err && err.message) ? err.message : "Network error.";
                 setBotStage("error");
-                placeholder.textContent = `⚠️ ${msg}`;
+                placeholder.textContent = ` ${msg}`;
                 resetBotStageToIdleLater();
             }
         });
@@ -623,5 +680,8 @@
             books[next]?.click();
             books[next]?.scrollIntoView({ behavior: "smooth", inline: "center" });
         });
+
+        // ---------- Initial render ----------
+        // Note: Initial render moved to after loadChatHistoryFromDB() completes
     }
 })();

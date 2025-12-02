@@ -110,7 +110,8 @@ neutral_prompt = PromptTemplate(
 
 
 # 7. Mental health response template
-MENTAL_HEALTH_RESPONSE = """I hear that you're going through a difficult time. I'm an AI and not a certified mental health professional, so I encourage you to reach out to a qualified specialist who can provide proper support.
+MENTAL_HEALTH_RESPONSE = """I hear that you're going through a difficult time. 
+I'm an AI and not a certified mental health professional, so I encourage you to reach out to a qualified specialist who can provide proper support.
 
 If you need immediate help:
 • 988 Suicide & Crisis Lifeline: Call or text 988 (24/7)

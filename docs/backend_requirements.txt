@@ -6,3 +6,14 @@ vaderSentiment==3.3.2
 fastapi==0.115.5
 uvicorn[standard]==0.32.0
 
+# Database
+sqlalchemy==2.0.25
+psycopg==3.1.18
+psycopg2-binary==2.9.9
+
+# Authentication
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-jose[cryptography]==3.3.0
+pydantic[email]==2.7.4
+python-multipart==0.0.9

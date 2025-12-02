@@ -11,42 +11,9 @@
 <body>
 
     <!-- ============================================== -->
-    <!-- LOGIN OVERLAY - Fixed position, shows first -->
+    <!-- MAIN APPLICATION -->
     <!-- ============================================== -->
-    <div id="loginOverlay">
-        <div class="login-card">
-            <h2>Sentiment AI Chat</h2>
-            <h3>Secure Access Required</h3>
-            
-            <form id="loginForm" class="login-form">
-                
-                <!-- Display Credentials -->
-                <div class="credentials-info">
-                    <p>
-                        <strong>Please enter your password:</strong>
-                        <br>If you cannot login, please contact <br>
-                        Jewell Callahan for more information.
-                    </p>
-                </div>
-                
-                <!-- Status Message -->
-                <div id="statusMessage" class="status-message" aria-live="polite">Ready to log in.</div>
-
-                <label for="username">Username</label>
-                <input type="text" id="username" value="testuser" required />
-                
-                <label for="password">Password</label>
-                <input type="password" id="password" value="password123" required />
-                
-                <button type="submit" id="loginButton">Log In</button>
-            </form>
-        </div>
-    </div>
-    
-    <!-- ============================================== -->
-    <!-- MAIN APPLICATION - Hidden until login success -->
-    <!-- ============================================== -->
-    <div class="app" id="mainAppContainer" style="display: none;">
+    <div class="app" id="mainAppContainer">
         <!-- LEFT: Tools + Bookshelf + Info + Background Panel -->
         <aside class="left" id="leftPane">
             <header class="left__header">
@@ -107,7 +74,30 @@
         <!-- RIGHT: Header + Messages + Composer -->
         <main class="right">
             <div class="right__header">
-                <h2></h2>
+                <h2>Knight Bot</h2>
+                
+                <!-- User Menu Dropdown -->
+                <div class="user-menu">
+                    <button class="user-menu__button" id="userMenuButton">
+                        <span id="userMenuName">User</span>
+                        <span class="user-menu__icon">▼</span>
+                    </button>
+                    
+                    <div class="user-menu__dropdown" id="userMenuDropdown">
+                        <div class="user-menu__header">
+                            <div class="user-menu__email" id="userMenuEmail">user@example.com</div>
+                        </div>
+                        <div class="user-menu__divider"></div>
+                        <button class="user-menu__item" id="changePasswordBtn">
+                            <span class="user-menu__icon">🔒</span>
+                            Change Password
+                        </button>
+                        <button class="user-menu__item" id="logoutBtn">
+                            <span class="user-menu__icon">🚪</span>
+                            Logout
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="right__messages" id="messages"></div>
