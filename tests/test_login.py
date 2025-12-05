@@ -39,7 +39,7 @@ def register_test_user():
         timeout=5
     )
 
-    if response.status_code == 200:
+    if response.status_code in (200, 201):
         # Expected behavior: success message
         return
 
