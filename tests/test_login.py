@@ -9,10 +9,11 @@ VERIFY_URL = f"{API_BASE}/auth/verify-email"
 LOGIN_URL = f"{API_BASE}/auth/login"
 CHAT_URL = f"{API_BASE}/chat"
 
+# Must match backend
 SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
 
-# Fixed credentials for CI tests
+# Fixed CI credentials
 TEST_USERNAME = "ci_test_user"
 TEST_PASSWORD = "ci_test_password123"
 TEST_EMAIL = "ci_test_user@example.com"
@@ -21,7 +22,13 @@ CHAT_PAYLOAD = {"message": "Hello test!"}
 
 
 def register_test_user():
-    """Register the CI test user. If it already exists, ignore the error."""
+    """
+    Register the CI user.
+    Acceptable outcomes:
+      • 200 (successful registration)
+      • 400 (username/email already exists)
+    Anything else = unexpected.
+    """
     response = requests.post(
         REGISTER_URL,
         json={
@@ -31,40 +38,38 @@ def register_test_user():
         },
         timeout=5
     )
-    
-    # If already registered, we can ignore error 400
-    if response.status_code not in (200, 400):
-        pytest.fail(f"Unexpected error during user registration: {response.text}")
-    
-    return response
+
+    if response.status_code == 200:
+        # Expected behavior: success message
+        return
+
+    if response.status_code == 400:
+        # Already exists: acceptable
+        return
+
+    pytest.fail(f"Unexpected error during user registration: {response.text}")
 
 
-def extract_verification_token(registration_response):
+def generate_verification_token():
     """
-    Since email sending is disabled in CI, we rely on your backend printing:
-        ⚠️ Email not configured. Would send to test@example.com:
-        Subject: Verify Your Email - ...
-        <token is in the generated verification link>
-    
-    BUT since the API does not return the token,
-    we decode it from the URL your backend constructs.
-
-    This assumes your FAST API handler for registration returns the user object
-    and the backend prints the verification link containing the token.
+    Your backend does NOT return the token in /register.
+    The test must generate the *same* token your backend would create.
     """
-    # The backend does not directly return a token.
-    # So we generate our own — identical to backend logic.
-    token = jwt.encode(
+    return jwt.encode(
         {"email": TEST_EMAIL, "type": "verification"},
         SECRET_KEY,
         algorithm=ALGORITHM
     )
-    return token
 
 
 def verify_test_user():
-    """Call the verify-email endpoint using the generated token."""
-    token = extract_verification_token(None)
+    """
+    Verify the user using the verification endpoint.
+    Acceptable:
+      • 200 verification worked
+      • 400 email already verified
+    """
+    token = generate_verification_token()
 
     resp = requests.post(
         VERIFY_URL,
@@ -72,8 +77,10 @@ def verify_test_user():
         timeout=5
     )
 
-    if resp.status_code not in (200, 400):
-        pytest.fail(f"Unexpected error during email verification: {resp.text}")
+    if resp.status_code in (200, 400):
+        return  # All good
+
+    pytest.fail(f"Unexpected error during email verification: {resp.text}")
 
 
 def login(username, password):
@@ -86,8 +93,9 @@ def login(username, password):
 
 # ------------------ TESTS ------------------ #
 
+
 def test_login_success():
-    """User should be able to login successfully after verification."""
+    """User should be able to login if verified."""
     
     register_test_user()
     verify_test_user()
@@ -102,7 +110,6 @@ def test_login_success():
 
 
 def test_login_failure():
-    """Invalid credentials must return 401."""
-    resp = login("not_a_real_user", "wrongpass")
-    assert resp.status_code == 401, \
-        f"Expected 401 but got {resp.status_code}."
+    """Invalid credentials should return 401."""
+    resp = login("baduser", "wrongpass")
+    assert resp.status_code == 401

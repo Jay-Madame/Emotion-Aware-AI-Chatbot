@@ -34,12 +34,17 @@ jobs:
     - name: Start FastAPI Server
       run: | 
         uvicorn src.server:app --host 0.0.0.0 --port 8000 &
-
-        SERVER_PID=$!
+        echo $! > uvicorn_pid.txt
         sleep 3
-        
+
+    - name: Run tests
+      run: |
         python -m pytest tests/
-        kill $SERVER_PID
+    
+    - name: Stop FastAPI Server
+      run: |
+        kill $(cat uvicorn_pid.txt)
+        rm uvicorn_pid.txt
       env:
         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
         GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
