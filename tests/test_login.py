@@ -15,7 +15,7 @@ ALGORITHM = "HS256"
 
 # Fixed CI credentials
 TEST_USERNAME = "ci_test_user"
-TEST_PASSWORD = "ci_test_password123"
+TEST_PASSWORD = "ci_test_password123"[:72]
 TEST_EMAIL = "ci_test_user@example.com"
 
 CHAT_PAYLOAD = {"message": "Hello test!"}
