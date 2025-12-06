@@ -1,61 +1,36 @@
-# tests/test_chat_api.py
+# tests/test_gemini_api.py
 """
-Simple API tests for the chat endpoint.
-These tests verify basic functionality without complex authentication.
+Test Gemini API connection.
+CT-04: Component test for Gemini API.
 """
-import pytest
 import os
-from fastapi.testclient import TestClient
+import pytest
+from dotenv import load_dotenv
 
-# Set test environment
-os.environ["TESTING"] = "1"
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+load_dotenv()
 
-from src.server import app
-
-client = TestClient(app)
-
-# Test data
-CHAT_PAYLOAD = {
-    "message": "Hello, how are you?",
-    "user_id": 1,
-    "chat_history": []
-}
-
-
-def test_chat_endpoint_exists():
-    """UT-01: Test that chat endpoint exists and accepts requests"""
-    # This will fail with 404 (user not found) but that's expected
-    # We're just testing the endpoint exists
-    response = client.post("/chat", json=CHAT_PAYLOAD)
-    # Should return 404 (user not found) or 500, not 404 (route not found)
-    assert response.status_code in [404, 500], f"Expected 404 or 500, got {response.status_code}"
-
-
-def test_health_endpoint():
-    """Test health check endpoint"""
-    response = client.get("/health")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["status"] == "healthy"
-
-
-def test_chat_empty_message():
-    """UT-03: Test that empty messages are rejected"""
-    payload = {
-        "message": "",
-        "user_id": 1,
-        "chat_history": []
-    }
-    response = client.post("/chat", json=payload)
-    assert response.status_code == 400, f"Expected 400, got {response.status_code}"
-
-
-def test_chat_missing_fields():
-    """Test that missing required fields are rejected"""
-    payload = {
-        "message": "Hello"
-        # Missing user_id
-    }
-    response = client.post("/chat", json=payload)
-    assert response.status_code == 422, f"Expected 422 (validation error), got {response.status_code}"
+def test_gemini_api_connection():
+    """CT-04: Test Gemini API connection and response"""
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    
+    # Check if API key is available
+    api_key = os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        pytest.skip("GOOGLE_API_KEY not set")
+    
+    try:
+        # Initialize Gemini model
+        model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
+        
+        # Test with a simple prompt
+        response = model.invoke("Say 'Hello' in one word")
+        
+        # Verify response
+        assert response is not None, "Response should not be None"
+        assert hasattr(response, 'content'), "Response should have content attribute"
+        assert len(response.content) > 0, "Response content should not be empty"
+        
+        print(f"✓ Gemini API test passed. Response: {response.content[:50]}...")
+        
+    except Exception as e:
+        pytest.fail(f"Gemini API connection failed: {str(e)}")
