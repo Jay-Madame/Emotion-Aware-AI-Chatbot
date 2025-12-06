@@ -8,6 +8,6 @@ SERVER_PID=$!
 sleep 5
 
 # Run tests
-export TESTING=1
+export DATABSE_URL="sqlite:///:memory:"
 
-python -m pytest tests/
+python -m pytest tests/ --disable-warnings -v
