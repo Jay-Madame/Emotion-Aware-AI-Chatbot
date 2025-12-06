@@ -11,8 +11,7 @@ langchain-groq==0.3.8
 
 # Database
 sqlalchemy==2.0.25
-psycopg==3.1.18
-psycopg2-binary==2.9.9 # Kept to satisfy the ModuleNotFoundError: psycopg2
+psycopg[binary]==3.1.18 # Use binary extra for easier install
 
 # Authentication
 passlib[bcrypt]==1.7.4
@@ -21,3 +20,6 @@ python-jose[cryptography]>=3.4.0
 cryptography>=42.0.0
 pydantic[email]==2.7.4
 python-multipart==0.0.9
+
+# Google AI dependencies for testing
+google-genai==0.1.0 

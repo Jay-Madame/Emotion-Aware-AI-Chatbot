@@ -17,8 +17,6 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# REMOVED: Base.metadata.create_all(bind=engine) from file scope
-
 # Override dependency to use the test session
 def override_get_db():
     db = TestingSessionLocal()
@@ -51,7 +49,7 @@ def generate_verification_token():
         algorithm=ALGORITHM
     )
 
-# Fixture to manage test database lifecycle (tables)
+# CRITICAL FIX: Pytest fixture to manage test database lifecycle (tables)
 @pytest.fixture(scope="function")
 def db_session_fixture():
     # Setup: Create tables before each test
