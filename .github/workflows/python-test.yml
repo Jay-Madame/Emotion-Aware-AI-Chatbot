@@ -30,6 +30,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Create venv
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+
     - name: Ensure Scripts are executable
       run: |
         chmod 700 chmodAllScripts.sh
@@ -37,6 +42,7 @@ jobs:
 
     - name: Install dependencies
       run: |
+        source .venv/bin/activate
         ./scripts/InstallDependencies.sh
 
     - name: Start FastAPI Server
