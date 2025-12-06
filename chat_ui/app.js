@@ -19,7 +19,7 @@ console.log('App.js loaded - Starting initialization...');
         window.location.hostname === "localhost" ||
         window.location.hostname === "127.0.0.1";
 
-    const API_BASE = isLocalhost ? "http://localhost:8000" : "";
+    const API_BASE = ''
     const CHAT_URL = `${API_BASE}/chat`;
 
     function uuid() {
