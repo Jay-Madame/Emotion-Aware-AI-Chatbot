@@ -1,7 +1,6 @@
 # src/auth.py
 import os
 import smtplib
-import threading
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -135,13 +134,13 @@ def send_email(to_email: str, subject: str, body: str):
             server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.send_message(msg)
         
-        print(f"✅ Email sent to {to_email}")
+        print(f"Email sent to {to_email}")
     except Exception as e:
-        print(f"❌ Failed to send email: {e}")
+        print(f"Failed to send email: {e}")
 
 def send_verification_email(email: str, token: str):
     """Send email verification link"""
-    verification_link = f"{FRONTEND_URL}/verify-email.html?token={token}"
+    verification_link = f"{FRONTEND_URL}/verify-email?token={token}"
     
     subject = "Verify Your Email - Knight Bot"
     body = f"""
@@ -163,7 +162,7 @@ def send_verification_email(email: str, token: str):
 
 def send_password_reset_email(email: str, token: str):
     """Send password reset link"""
-    reset_link = f"{FRONTEND_URL}/reset-password.html?token={token}"
+    reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
     
     subject = "Reset Your Password - Knight Bot"
     body = f"""
@@ -205,16 +204,9 @@ def register_user(db: Session, username: str, email: str, password: str):
     hashed_password = hash_password(password)
     user = create_user(db, username, email, hashed_password)
     
-    # Send verification email in background thread (async)
+    # Send verification email
     token = create_verification_token(email)
-    email_thread = threading.Thread(
-        target=send_verification_email,
-        args=(email, token),
-        daemon=True
-    )
-    email_thread.start()
-    
-    print(f"✅ User {username} registered. Verification email sending in background...")
+    send_verification_email(email, token)
     
     return user
 
@@ -284,15 +276,8 @@ def request_password_reset(db: Session, email: str):
     expires_at = datetime.utcnow() + timedelta(hours=1)
     create_reset_token(db, email, token, expires_at)
     
-    # Send reset email in background thread (async)
-    email_thread = threading.Thread(
-        target=send_password_reset_email,
-        args=(email, token),
-        daemon=True
-    )
-    email_thread.start()
-    
-    print(f"✅ Password reset requested for {email}. Email sending in background...")
+    # Send reset email
+    send_password_reset_email(email, token)
 
 def reset_password(db: Session, token: str, new_password: str):
     """Reset password with token"""

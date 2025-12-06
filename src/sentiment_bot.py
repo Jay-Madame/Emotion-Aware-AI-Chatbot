@@ -9,11 +9,13 @@ import os
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if not GOOGLE_API_KEY:
-    raise EnvironmentError("Missing GOOGLE_API_KEY in .env")
+if not GOOGLE_API_KEY or not GROQ_API_KEY:
+    raise EnvironmentError("Missing GOOGLE_API_KEY or GROQ_API_KEY in .env")
 
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
 # 2. VADER-based sentiment analyzer
 class SentimentAnalyzer:
@@ -72,6 +74,7 @@ def check_mental_health_concerns(user_input: str) -> str:
 sentiment_analyzer = SentimentAnalyzer()
 
 # 5. Models for routed responses
+#positive_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
 positive_model = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.7)
 negative_model = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.5)
 neutral_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
@@ -104,6 +107,7 @@ neutral_prompt = PromptTemplate(
         "User: {user_input}\n\nResponse:"
     ),
 )
+
 
 # 7. Mental health response template
 MENTAL_HEALTH_RESPONSE = """I hear that you're going through a difficult time. 

@@ -1,7 +1,6 @@
 # src/server.py
 import os
 from typing import List, Optional
-from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -24,23 +23,7 @@ from .auth import (
 
 load_dotenv()
 
-# ============ LIFESPAN EVENT HANDLER ============
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Only initialize database if not in testing mode
-    if not os.getenv("TESTING"):
-        init_db()
-        print("Server started successfully")
-    yield
-    # Shutdown: Add cleanup here if needed
-    if not os.getenv("TESTING"):
-        print("Server shutting down")
-
-# ============ APP INITIALIZATION ============
-app = FastAPI(
-    title="Knight Bot Counseling API",
-    lifespan=lifespan
-)
+app = FastAPI(title="Knight Bot Counseling API")
 
 # CORS
 app.add_middleware(
@@ -50,6 +33,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    init_db()
+    print("Server started successfully")
 
 # ============ REQUEST/RESPONSE MODELS ============
 
@@ -284,10 +273,9 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
 def health_check():
     return {"status": "healthy", "message": "Server is running"}
 
-# Mount static files (frontend) - only if not testing
-if not os.getenv("TESTING"):
-    app.mount(
-        "/",
-        StaticFiles(directory="chat_ui", html=True),
-        name="static"
-    )
+# Mount static files (frontend)
+app.mount(
+    "/",
+    StaticFiles(directory="chat_ui", html=True),
+    name="static"
+)
