@@ -5,8 +5,13 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
+# Determine database URL
+TESTING = os.getenv("TESTING") == "1"
+
+if TESTING:
+    DATABASE_URL = "sqlite:///:memory:"  # in-memory DB for tests
+else:
+    DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./chatbot.db")
 
 engine = create_engine(
     DATABASE_URL,
@@ -17,10 +22,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 # ============ DATABASE MODELS ============
-
 class User(Base):
     __tablename__ = "users"
-    
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(100), unique=True, nullable=False, index=True)
@@ -31,7 +34,6 @@ class User(Base):
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
-    
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False, index=True)
     message = Column(Text, nullable=False)
@@ -41,7 +43,6 @@ class ChatMessage(Base):
 
 class PasswordResetToken(Base):
     __tablename__ = "password_reset_tokens"
-    
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(100), nullable=False, index=True)
     token = Column(String(255), unique=True, nullable=False)
@@ -50,7 +51,6 @@ class PasswordResetToken(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 # ============ DATABASE FUNCTIONS ============
-
 def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
