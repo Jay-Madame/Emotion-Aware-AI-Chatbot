@@ -6,6 +6,7 @@ from src.server import app
 from src.database import Base, get_db
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from datetime import datetime, timedelta  # <--- NEW IMPORT
 
 # ============ TEST DATABASE SETUP ============
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -35,8 +36,10 @@ TEST_EMAIL = "ci_test_user@example.com"
 
 # ============ HELPERS ============
 def generate_verification_token():
+    # ADDED: Include the 'exp' claim to match the token generated in src/auth.py
+    expire = datetime.utcnow() + timedelta(hours=24) 
     return jwt.encode(
-        {"email": TEST_EMAIL, "type": "verification"},
+        {"email": TEST_EMAIL, "exp": expire, "type": "verification"}, # <--- 'exp' ADDED HERE
         SECRET_KEY,
         algorithm=ALGORITHM
     )
@@ -49,25 +52,31 @@ def test_login_success():
         "email": TEST_EMAIL,
         "password": TEST_PASSWORD
     })
-    assert resp.status_code in (200, 201, 400)
+    # Accept 200 (created) or 400 (if user already exists from a previous failed run)
+    assert resp.status_code in (200, 201, 400), f"Register failed: {resp.json()}"
 
     # Verify
     token = generate_verification_token()
     resp = client.post("/auth/verify-email", json={"token": token})
-    assert resp.status_code in (200, 400)
+    # Accept 200 (verified) or 400 (if already verified or token expired, but should pass with fix)
+    assert resp.status_code == 200, f"Verify failed: {resp.json()}"
 
     # Login
     resp = client.post("/auth/login", json={
         "username": TEST_USERNAME,
         "password": TEST_PASSWORD
     })
-    assert resp.status_code == 200
+    
+    assert resp.status_code == 200, f"Login failed: {resp.json()}"
     data = resp.json()
     assert "access_token" in data
+    assert data["token_type"] == "bearer"
+
 
 def test_login_failure():
     resp = client.post("/auth/login", json={
-        "username": "baduser",
-        "password": "wrongpass"
+        "username": "non_existent_user",
+        "password": "wrong_password"
     })
     assert resp.status_code == 401
+    assert resp.json() == {"detail": "Incorrect username or password"}
