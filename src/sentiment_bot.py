@@ -9,13 +9,12 @@ import os
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-if not GOOGLE_API_KEY or not GROQ_API_KEY:
-    raise EnvironmentError("Missing GOOGLE_API_KEY or GROQ_API_KEY in .env")
+
+if not GOOGLE_API_KEY:
+    raise EnvironmentError("Missing GOOGLE_API_KEY in .env")
 
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 
 # 2. VADER-based sentiment analyzer
 class SentimentAnalyzer:
@@ -121,6 +120,7 @@ You don't have to go through this alone. Reaching out is a sign of strength."""
 
 # 8. Main routing function
 def route_by_sentiment(user_input: str) -> str:
+    api_key = os.getenv("GOOGLE_API_KEY")
     """
     Main entry point for the chatbot to process user input and return a response.
     Used by chat.py and can be used by frontend applications.
