@@ -29,28 +29,27 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Ensure Scripts are executable
+      run: |
+        chmod 700 chmodAllScripts.sh
+        ./scripts/chmodAllScripts.sh
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
-        pip install -r docs/backend_requirements.txt
-        pip install google-genai google-api-core python-dotenv pytest groq
-        pip install fastapi uvicorn "python-multipart[standard]"
+        ./scripts/InstallDependencies.sh
 
     - name: Start FastAPI Server
       run: | 
-        uvicorn src.server:app --host 0.0.0.0 --port 8000 &
-        echo $! > uvicorn_pid.txt
-        sleep 3
+        ./scripts/StartServer.sh
 
     - name: Run tests
       run: |
-        python -m pytest tests/
+        ./scripts/RunTests.sh
     
     - name: Stop FastAPI Server
       run: |
-        kill $(cat uvicorn_pid.txt)
-        rm uvicorn_pid.txt
+        ./scripts/StopServer.sh
       if: always()
       
       
