@@ -1,34 +1,44 @@
 #!/bin/bash
 set -e
 
-# --- Variables ---
 VENV_DIR=".venv"
 PID_FILE="uvicorn_pid.txt"
-APP_MODULE="src.server:app" 
+APP_MODULE="src.server:app"
 HOST="0.0.0.0"
 PORT="8000"
 
-# --- Create venv if it doesn't exist ---
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv "$VENV_DIR"
-fi
-
-# --- Activate venv ---
+# Activate venv
 source "$VENV_DIR/bin/activate"
 
-# --- Install dependencies ---
-pip install --upgrade pip
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
+# If PID file exists but process is dead → remove it
+if [ -f "$PID_FILE" ]; then
+    PID=$(cat "$PID_FILE")
+
+    if ! kill -0 "$PID" 2>/dev/null; then
+        echo "Stale PID file found. Removing..."
+        rm -f "$PID_FILE"
+    else
+        echo "Server already running with PID $PID"
+        exit 0
+    fi
 fi
 
-# --- Start Uvicorn server in background ---
-if [ -f "$PID_FILE" ]; then
-    echo "Server already running? PID file exists: $PID_FILE"
-else
-    echo "Starting FastAPI server..."
-    uvicorn "$APP_MODULE" --host "$HOST" --port "$PORT" &
-    echo $! > "$PID_FILE"
-    echo "Server started with PID $(cat $PID_FILE)"
+echo "Starting FastAPI server..."
+uvicorn "$APP_MODULE" --host "$HOST" --port "$PORT" > uvicorn.log 2>&1 &
+
+PID=$!
+echo $PID > "$PID_FILE"
+
+sleep 2
+
+# Verify server is running
+if ! curl --silent http://localhost:$PORT/ > /dev/null; then
+    echo "❌ ERROR: Server failed to start. Check uvicorn.log:"
+    echo "-----------------------------------------------"
+    cat uvicorn.log
+    echo "-----------------------------------------------"
+    rm -f "$PID_FILE"
+    exit 1
 fi
+
+echo "Server started successfully with PID $PID"

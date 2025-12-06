@@ -1,5 +1,5 @@
 #!/bin/bash
-chmod 700 chmodAllScripts.sh
+chmod 700 scripts/chmodAllScripts.sh
 python3 -m venv .venv
 source .venv/bin/activate
 ./scripts/chmodAllScripts.sh

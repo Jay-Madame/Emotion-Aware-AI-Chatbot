@@ -6,10 +6,9 @@ PID_FILE="uvicorn_pid.txt"
 if [ -f "$PID_FILE" ]; then
     PID=$(cat "$PID_FILE")
     echo "Stopping server with PID $PID..."
-    kill "$PID" || echo "Failed to kill PID $PID, maybe it's already stopped."
+    kill "$PID" || echo "Failed to kill PID $PID"
     rm -f "$PID_FILE"
-    echo "Server stopped."
 else
-    echo "No server PID file found. Trying to stop uvicorn processes..."
-    pkill -f uvicorn || echo "No uvicorn processes found."
+    echo "No PID file — killing any uvicorn processes"
+    pkill -f uvicorn || true
 fi

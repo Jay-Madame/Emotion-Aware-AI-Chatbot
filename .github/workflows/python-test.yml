@@ -23,16 +23,18 @@ jobs:
 
     env:
         GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-        GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
         AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+
 
     steps:
     - uses: actions/checkout@v4
     
     - name: Create venv
       run: |
-        python -m venv .venv
+        python3.12 -m venv "$VENV_DIR"
         source .venv/bin/activate
 
     - name: Ensure Scripts are executable
