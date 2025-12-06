@@ -1,27 +1,33 @@
 # tests/test_login.py
 import pytest
+import os
 from jose import jwt
 from fastapi.testclient import TestClient
-from src.server import app
-from src.database import Base, get_db
+from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timedelta
+
+# Set test database URL BEFORE importing app
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+
+from src.server import app
+from src.database import Base, get_db, engine as prod_engine
 
 # ============ TEST DATABASE SETUP ============
-SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, 
+# Create a separate test engine
+TEST_DATABASE_URL = "sqlite:///:memory:"
+test_engine = create_engine(
+    TEST_DATABASE_URL, 
     connect_args={"check_same_thread": False}
 )
-TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 # ============ TEST CONFIG ============
 SECRET_KEY = "your-secret-key-change-this-in-production"
 ALGORITHM = "HS256"
 
 TEST_USERNAME = "ci_test_user"
-TEST_PASSWORD = "ci_test_password123"[:72]
+TEST_PASSWORD = "ci_test_password123"
 TEST_EMAIL = "ci_test_user@example.com"
 
 # ============ HELPERS ============
@@ -34,13 +40,13 @@ def generate_verification_token():
     )
 
 # ============ FIXTURES ============
-@pytest.fixture(scope="function", autouse=True)
-def setup_test_db():
-    """Setup and teardown test database for each test"""
-    # Create tables
-    Base.metadata.create_all(bind=engine)
+@pytest.fixture(scope="function")
+def db_session():
+    """Create test database tables and provide a session"""
+    # Create all tables in test database
+    Base.metadata.create_all(bind=test_engine)
     
-    # Override the dependency
+    # Override the get_db dependency to use test database
     def override_get_db():
         db = TestingSessionLocal()
         try:
@@ -50,19 +56,21 @@ def setup_test_db():
     
     app.dependency_overrides[get_db] = override_get_db
     
-    yield
+    yield TestingSessionLocal()
     
-    # Cleanup: Drop tables and clear overrides
-    Base.metadata.drop_all(bind=engine)
+    # Cleanup
+    Base.metadata.drop_all(bind=test_engine)
     app.dependency_overrides.clear()
 
 @pytest.fixture(scope="function")
-def client():
-    """Create a test client for each test"""
-    return TestClient(app)
+def client(db_session):
+    """Create a test client with test database"""
+    with TestClient(app) as test_client:
+        yield test_client
 
 # ============ TESTS ============
 def test_login_success(client):
+    """Test successful registration, verification, and login flow"""
     # Register
     resp = client.post("/auth/register", json={
         "username": TEST_USERNAME,
@@ -71,7 +79,7 @@ def test_login_success(client):
     })
     assert resp.status_code in (200, 201), f"Register failed: {resp.json()}"
 
-    # Verify
+    # Verify email
     token = generate_verification_token()
     resp = client.post("/auth/verify-email", json={"token": token})
     assert resp.status_code == 200, f"Verify failed: {resp.json()}"
@@ -86,11 +94,34 @@ def test_login_success(client):
     data = resp.json()
     assert "access_token" in data
     assert data["token_type"] == "bearer"
+    assert data["username"] == TEST_USERNAME
+    assert data["email"] == TEST_EMAIL
 
 
 def test_login_failure(client):
+    """Test login with non-existent user returns 401"""
     resp = client.post("/auth/login", json={
         "username": "non_existent_user",
         "password": "wrong_password"
     })
     assert resp.status_code == 401, f"Expected 401, got {resp.status_code}: {resp.json()}"
+    assert "Incorrect username or password" in resp.json()["detail"]
+
+
+def test_login_unverified_user(client):
+    """Test login with unverified email returns 403"""
+    # Register user but don't verify
+    resp = client.post("/auth/register", json={
+        "username": "unverified_user",
+        "email": "unverified@example.com",
+        "password": TEST_PASSWORD
+    })
+    assert resp.status_code in (200, 201)
+
+    # Try to login without verification
+    resp = client.post("/auth/login", json={
+        "username": "unverified_user",
+        "password": TEST_PASSWORD
+    })
+    assert resp.status_code == 403, f"Expected 403, got {resp.status_code}: {resp.json()}"
+    assert "not verified" in resp.json()["detail"].lower()

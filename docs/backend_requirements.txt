@@ -11,15 +11,15 @@ langchain-groq==0.3.8
 
 # Database
 sqlalchemy==2.0.25
-psycopg[binary]==3.1.18 # Use binary extra for easier install
+psycopg[binary]==3.1.18
 
-# Authentication
+# Authentication - Updated versions with pre-built wheels
 passlib[bcrypt]==1.7.4
-bcrypt>=4.1.2
-python-jose[cryptography]>=3.4.0
-cryptography>=42.0.0
+bcrypt==4.2.1
+python-jose[cryptography]==3.4.0
+cryptography==43.0.3
 pydantic[email]==2.7.4
 python-multipart==0.0.9
 
 # Google AI dependencies for testing
-google-genai==0.1.0 
+google-genai==0.1.0
