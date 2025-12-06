@@ -6,7 +6,7 @@ from src.server import app
 from src.database import Base, get_db
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from datetime import datetime, timedelta  # <--- NEW IMPORT
+from datetime import datetime, timedelta # <--- NEW IMPORT
 
 # ============ TEST DATABASE SETUP ============
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
@@ -37,7 +37,7 @@ TEST_EMAIL = "ci_test_user@example.com"
 # ============ HELPERS ============
 def generate_verification_token():
     # ADDED: Include the 'exp' claim to match the token generated in src/auth.py
-    expire = datetime.utcnow() + timedelta(hours=24) 
+    expire = datetime.utcnow() + timedelta(hours=24)
     return jwt.encode(
         {"email": TEST_EMAIL, "exp": expire, "type": "verification"}, # <--- 'exp' ADDED HERE
         SECRET_KEY,
