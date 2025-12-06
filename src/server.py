@@ -27,17 +27,19 @@ load_dotenv()
 # ============ LIFESPAN EVENT HANDLER ============
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database
-    init_db()
-    print("Server started successfully")
+    # Only initialize database if not in testing mode
+    if not os.getenv("TESTING"):
+        init_db()
+        print("Server started successfully")
     yield
     # Shutdown: Add cleanup here if needed
-    print("Server shutting down")
+    if not os.getenv("TESTING"):
+        print("Server shutting down")
 
 # ============ APP INITIALIZATION ============
 app = FastAPI(
     title="Knight Bot Counseling API",
-    lifespan=lifespan  # Add lifespan parameter
+    lifespan=lifespan
 )
 
 # CORS
@@ -282,9 +284,10 @@ def chat(req: ChatRequest, db: Session = Depends(get_db)):
 def health_check():
     return {"status": "healthy", "message": "Server is running"}
 
-# Mount static files (frontend)
-app.mount(
-    "/",
-    StaticFiles(directory="chat_ui", html=True),
-    name="static"
-)
+# Mount static files (frontend) - only if not testing
+if not os.getenv("TESTING"):
+    app.mount(
+        "/",
+        StaticFiles(directory="chat_ui", html=True),
+        name="static"
+    )

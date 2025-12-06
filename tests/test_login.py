@@ -2,20 +2,33 @@
 import pytest
 import os
 from jose import jwt
-from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from contextlib import asynccontextmanager
 
-# ============ TEST DATABASE SETUP ============
-# CRITICAL: Set this BEFORE importing anything from src
+# ============ CRITICAL: DISABLE LIFESPAN FOR TESTS ============
+# This prevents the production database initialization during tests
+os.environ["TESTING"] = "1"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
-from src.server import app
+from fastapi import FastAPI
+from src.server import app as production_app
 from src.database import Base, get_db
-import src.database as db_module
 
-# Create a separate test engine
+# Create test-specific app WITHOUT lifespan
+@asynccontextmanager
+async def test_lifespan(app: FastAPI):
+    # Do nothing during startup/shutdown in tests
+    yield
+
+# Replace the app's lifespan with our test version
+production_app.router.lifespan_context = test_lifespan
+
+# Use the modified app
+app = production_app
+
+# ============ TEST DATABASE SETUP ============
 TEST_DATABASE_URL = "sqlite:///:memory:"
 test_engine = create_engine(
     TEST_DATABASE_URL, 
@@ -41,14 +54,9 @@ def generate_verification_token():
     )
 
 # ============ FIXTURES ============
-@pytest.fixture(scope="function")
-def db_session():
-    """Create test database tables and provide a session"""
-    # CRITICAL FIX: Replace the production engine in the database module
-    # This ensures init_db() uses the test engine
-    original_engine = db_module.engine
-    db_module.engine = test_engine
-    
+@pytest.fixture(scope="function", autouse=True)
+def setup_test_database():
+    """Setup test database before each test"""
     # Create all tables in test database
     Base.metadata.create_all(bind=test_engine)
     
@@ -62,18 +70,16 @@ def db_session():
     
     app.dependency_overrides[get_db] = override_get_db
     
-    yield TestingSessionLocal()
+    yield
     
-    # Cleanup
+    # Cleanup after test
     Base.metadata.drop_all(bind=test_engine)
     app.dependency_overrides.clear()
-    
-    # Restore original engine
-    db_module.engine = original_engine
 
 @pytest.fixture(scope="function")
-def client(db_session):
-    """Create a test client with test database"""
+def client():
+    """Create a test client"""
+    from fastapi.testclient import TestClient
     with TestClient(app) as test_client:
         yield test_client
 
