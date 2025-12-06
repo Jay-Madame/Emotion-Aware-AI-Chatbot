@@ -11,9 +11,6 @@ from fastapi.testclient import TestClient
 os.environ["TESTING"] = "1"
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
-from src.server import app
-from src.database import Base, get_db
-
 # ============ TEST DATABASE SETUP ============
 TEST_DATABASE_URL = "sqlite:///:memory:"
 test_engine = create_engine(
@@ -21,6 +18,19 @@ test_engine = create_engine(
     connect_args={"check_same_thread": False}
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+
+# Import database module and replace engine BEFORE importing app
+import src.database as db_module
+original_engine = db_module.engine
+original_session_local = db_module.SessionLocal
+
+# Replace the production engine and session with test versions
+db_module.engine = test_engine
+db_module.SessionLocal = TestingSessionLocal
+
+# Now import the app (it will use the test engine)
+from src.server import app
+from src.database import Base, get_db
 
 # ============ TEST CONFIG ============
 SECRET_KEY = "your-secret-key-change-this-in-production"
