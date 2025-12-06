@@ -17,9 +17,7 @@ engine = create_engine(
 )
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# CRITICAL FIX: Create tables here before test execution
-# This ensures all SQLAlchemy models (User, etc.) are available and initialized
-Base.metadata.create_all(bind=engine) 
+# REMOVED: Base.metadata.create_all(bind=engine) from file scope
 
 # Override dependency to use the test session
 def override_get_db():
@@ -45,7 +43,7 @@ TEST_EMAIL = "ci_test_user@example.com"
 
 # ============ HELPERS ============
 def generate_verification_token():
-    # ADDED: Include the 'exp' claim to match the token generated in src/auth.py
+    # FIXED: Include the 'exp' claim to match the token generated in src/auth.py
     expire = datetime.utcnow() + timedelta(hours=24) 
     return jwt.encode(
         {"email": TEST_EMAIL, "exp": expire, "type": "verification"},
@@ -53,17 +51,25 @@ def generate_verification_token():
         algorithm=ALGORITHM
     )
 
+# Fixture to manage test database lifecycle (tables)
+@pytest.fixture(scope="function")
+def db_session_fixture():
+    # Setup: Create tables before each test
+    Base.metadata.create_all(bind=engine)
+    yield
+    # Teardown: Drop tables after each test to ensure test isolation
+    Base.metadata.drop_all(bind=engine)
+
+
 # ============ TESTS ============
-def test_login_success():
+def test_login_success(db_session_fixture): # Inject the fixture
     # Register
-    # The first time the endpoint is called, it should pass now that tables are created.
     resp = client.post("/auth/register", json={
         "username": TEST_USERNAME,
         "email": TEST_EMAIL,
         "password": TEST_PASSWORD
     })
     # Accept 200 (created) or 201 (created), 400 (if user already exists from cleanup error)
-    # The 500 error due to missing tables is now fixed.
     assert resp.status_code in (200, 201, 400), f"Register failed: {resp.json()}"
 
     # Verify
@@ -83,7 +89,7 @@ def test_login_success():
     assert data["token_type"] == "bearer"
 
 
-def test_login_failure():
+def test_login_failure(db_session_fixture): # Inject the fixture
     resp = client.post("/auth/login", json={
         "username": "non_existent_user",
         "password": "wrong_password"
