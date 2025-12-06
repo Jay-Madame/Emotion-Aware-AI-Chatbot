@@ -1,8 +1,11 @@
 # tests/test_login.py
+import os
+os.environ["TESTING"] = "1"   # <- must be set before any DB import
+
 import pytest
 from jose import jwt
 from fastapi.testclient import TestClient
-from src.server import app
+from src.server import app  # now this will use in-memory SQLite
 
 client = TestClient(app)
 
@@ -13,14 +16,12 @@ TEST_USERNAME = "ci_test_user"
 TEST_PASSWORD = "ci_test_password123"[:72]
 TEST_EMAIL = "ci_test_user@example.com"
 
-
 def generate_verification_token():
     return jwt.encode(
         {"email": TEST_EMAIL, "type": "verification"},
         SECRET_KEY,
         algorithm=ALGORITHM
     )
-
 
 def test_login_success():
     # Register
@@ -29,7 +30,7 @@ def test_login_success():
         "email": TEST_EMAIL,
         "password": TEST_PASSWORD
     })
-    assert resp.status_code in (200, 201, 400)  # already exists is fine
+    assert resp.status_code in (200, 201, 400)
 
     # Verify
     token = generate_verification_token()
@@ -44,7 +45,6 @@ def test_login_success():
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
-
 
 def test_login_failure():
     resp = client.post("/auth/login", json={

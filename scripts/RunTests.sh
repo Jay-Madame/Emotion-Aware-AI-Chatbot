@@ -8,4 +8,5 @@ SERVER_PID=$!
 sleep 5
 
 # Run tests
+export TESTING=1
 python -m pytest tests/
