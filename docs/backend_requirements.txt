@@ -12,6 +12,7 @@ langchain-groq==0.3.8
 # Database
 sqlalchemy==2.0.25
 psycopg[binary]==3.1.18
+psycopg2-binary
 
 # Authentication - Pre-built wheels to avoid Rust compilation
 passlib[bcrypt]==1.7.4
