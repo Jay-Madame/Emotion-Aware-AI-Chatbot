@@ -26,7 +26,7 @@ jobs:
         AUTH_USERNAME: ${{ secrets.AUTH_USERNAME }}
         AUTH_PASSWORD: ${{ secrets.AUTH_PASSWORD }}
         SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        DATABASE_URL: sqlite:///./test.db
+        DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
 
     steps:

@@ -12,6 +12,7 @@ langchain-groq==0.3.8
 # Database
 sqlalchemy==2.0.25
 psycopg==3.1.18
+psycopg[binary]
 
 # Authentication
 passlib[bcrypt]==1.7.4
