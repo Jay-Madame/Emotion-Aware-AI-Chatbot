@@ -1,6 +1,7 @@
 # src/server.py
 import os
 from typing import List, Optional
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -23,7 +24,21 @@ from .auth import (
 
 load_dotenv()
 
-app = FastAPI(title="Knight Bot Counseling API")
+# ============ LIFESPAN EVENT HANDLER ============
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup: Initialize database
+    init_db()
+    print("Server started successfully")
+    yield
+    # Shutdown: Add cleanup here if needed
+    print("Server shutting down")
+
+# ============ APP INITIALIZATION ============
+app = FastAPI(
+    title="Knight Bot Counseling API",
+    lifespan=lifespan  # Add lifespan parameter
+)
 
 # CORS
 app.add_middleware(
@@ -33,12 +48,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Initialize database on startup
-@app.on_event("startup")
-async def startup_event():
-    init_db()
-    print("Server started successfully")
 
 # ============ REQUEST/RESPONSE MODELS ============
 
