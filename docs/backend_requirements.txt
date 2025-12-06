@@ -13,12 +13,18 @@ langchain-groq==0.3.8
 sqlalchemy==2.0.25
 psycopg[binary]==3.1.18
 
-# Authentication - Updated versions with pre-built wheels
+# Authentication - Pre-built wheels to avoid Rust compilation
 passlib[bcrypt]==1.7.4
 bcrypt==4.2.1
 python-jose[cryptography]==3.4.0
 cryptography==43.0.3
-pydantic[email]==2.7.4
+
+# Pydantic with pre-built wheels - IMPORTANT: Use exact versions
+pydantic==2.7.4
+pydantic-core==2.18.4
+email-validator==2.1.1
+
+# Other dependencies
 python-multipart==0.0.9
 
 # Google AI dependencies for testing
