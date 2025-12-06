@@ -9,6 +9,5 @@ sleep 5
 
 # Run tests
 export TESTING=1
-uvicorn src.server:app --reload
 
 python -m pytest tests/
