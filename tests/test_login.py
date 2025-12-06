@@ -7,13 +7,14 @@ from datetime import datetime, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Set test database URL BEFORE importing app
+# ============ TEST DATABASE SETUP ============
+# CRITICAL: Set this BEFORE importing anything from src
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
 from src.server import app
-from src.database import Base, get_db, engine as prod_engine
+from src.database import Base, get_db
+import src.database as db_module
 
-# ============ TEST DATABASE SETUP ============
 # Create a separate test engine
 TEST_DATABASE_URL = "sqlite:///:memory:"
 test_engine = create_engine(
@@ -43,6 +44,11 @@ def generate_verification_token():
 @pytest.fixture(scope="function")
 def db_session():
     """Create test database tables and provide a session"""
+    # CRITICAL FIX: Replace the production engine in the database module
+    # This ensures init_db() uses the test engine
+    original_engine = db_module.engine
+    db_module.engine = test_engine
+    
     # Create all tables in test database
     Base.metadata.create_all(bind=test_engine)
     
@@ -61,6 +67,9 @@ def db_session():
     # Cleanup
     Base.metadata.drop_all(bind=test_engine)
     app.dependency_overrides.clear()
+    
+    # Restore original engine
+    db_module.engine = original_engine
 
 @pytest.fixture(scope="function")
 def client(db_session):
