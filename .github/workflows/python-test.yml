@@ -37,7 +37,7 @@ jobs:
 
     - name: Ensure Scripts are executable
       run: |
-        chmod 700 chmodAllScripts.sh
+        chmod 700 scripts/chmodAllScripts.sh
         ./scripts/chmodAllScripts.sh
 
     - name: Install dependencies
