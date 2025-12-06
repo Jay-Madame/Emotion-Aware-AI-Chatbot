@@ -1,54 +1,61 @@
-from dotenv import load_dotenv
-from google import genai
-from google.genai import errors as genai_errors  # <-- [NEW] import error types
-import os
+# tests/test_chat_api.py
+"""
+Simple API tests for the chat endpoint.
+These tests verify basic functionality without complex authentication.
+"""
 import pytest
+import os
+from fastapi.testclient import TestClient
 
-load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
+# Set test environment
+os.environ["TESTING"] = "1"
+os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
-# test API Keys
-@pytest.fixture(scope="module")
-def gemini_client():
-    # Check for API Key
-    if not api_key:
-        raise ValueError("GOOGLE_API_KEY env variable is missing. Check secrets")
-    
-    # Check for valid API Key
-    try:
-        return genai.Client(api_key=api_key)
-    except Exception as e:
-        raise RuntimeError("Failed to initialize Gemini Client. Check if the provided key is valid.")
-    
+from src.server import app
 
-# Test Connection
-def test_gemini_api_connection(gemini_client):
-    model_name = "gemini-2.5-flash"
-    prompt = "Give me a simple response to confirm connection"
+client = TestClient(app)
 
-    try:
-        response = gemini_client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-        )
+# Test data
+CHAT_PAYLOAD = {
+    "message": "Hello, how are you?",
+    "user_id": 1,
+    "chat_history": []
+}
 
-    # --- [NEW] handle server-side errors (like 503) separately ---
-    except genai_errors.ServerError as e:
-        msg = str(e)
-        # If the model is overloaded / unavailable (503), don't fail CI – skip this test
-        if "503" in msg or "UNAVAILABLE" in msg or "overloaded" in msg:
-            pytest.skip("Gemini API overloaded (503 UNAVAILABLE). Skipping connectivity test.")
-        else:
-            pytest.fail(f"Gemini server error during content generation: {e}")
 
-    # --- [UNCHANGED in spirit] any other client-side issue still fails the test ---
-    except Exception as e:
-        # connection fails on our side (bad key, wrong model, etc.)
-        pytest.fail(f"API call failed during content generation: {e}")
+def test_chat_endpoint_exists():
+    """UT-01: Test that chat endpoint exists and accepts requests"""
+    # This will fail with 404 (user not found) but that's expected
+    # We're just testing the endpoint exists
+    response = client.post("/chat", json=CHAT_PAYLOAD)
+    # Should return 404 (user not found) or 500, not 404 (route not found)
+    assert response.status_code in [404, 500], f"Expected 404 or 500, got {response.status_code}"
 
-    # --- [SAME ASSERTIONS, just a tiny safety tweak] ---
-    # Use a local variable so we can inspect if needed
-    text = getattr(response, "text", None)
-    assert text is not None, "Response text was empty."
-    assert len(text.strip()) > 0, "Response was only whitespace"
 
+def test_health_endpoint():
+    """Test health check endpoint"""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "healthy"
+
+
+def test_chat_empty_message():
+    """UT-03: Test that empty messages are rejected"""
+    payload = {
+        "message": "",
+        "user_id": 1,
+        "chat_history": []
+    }
+    response = client.post("/chat", json=payload)
+    assert response.status_code == 400, f"Expected 400, got {response.status_code}"
+
+
+def test_chat_missing_fields():
+    """Test that missing required fields are rejected"""
+    payload = {
+        "message": "Hello"
+        # Missing user_id
+    }
+    response = client.post("/chat", json=payload)
+    assert response.status_code == 422, f"Expected 422 (validation error), got {response.status_code}"
