@@ -9,5 +9,6 @@ sleep 5
 
 # Run tests
 export TESTING=1
-export DATABASE_URL="sqlite:///./chatbot.db"
+uvicorn src.server:app --reload
+
 python -m pytest tests/

@@ -47,10 +47,6 @@ jobs:
         source .venv/bin/activate
         ./scripts/InstallDependencies.sh
 
-    - name: Start FastAPI Server
-      run: | 
-        ./scripts/StartServer.sh
-
     - name: Run tests
       run: |
         ./scripts/RunTests.sh
