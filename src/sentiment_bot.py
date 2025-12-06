@@ -10,7 +10,6 @@ load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-
 if not GOOGLE_API_KEY:
     raise EnvironmentError("Missing GOOGLE_API_KEY in .env")
 
@@ -73,7 +72,6 @@ def check_mental_health_concerns(user_input: str) -> str:
 sentiment_analyzer = SentimentAnalyzer()
 
 # 5. Models for routed responses
-#positive_model = ChatGroq(model="llama-3.3-70b-versatile", temperature=0.7)
 positive_model = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.7)
 negative_model = ChatGoogleGenerativeAI(model="gemini-2.5-pro", temperature=0.5)
 neutral_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.3)
@@ -107,7 +105,6 @@ neutral_prompt = PromptTemplate(
     ),
 )
 
-
 # 7. Mental health response template
 MENTAL_HEALTH_RESPONSE = """I hear that you're going through a difficult time. 
 I'm an AI and not a certified mental health professional, so I encourage you to reach out to a qualified specialist who can provide proper support.
@@ -120,7 +117,6 @@ You don't have to go through this alone. Reaching out is a sign of strength."""
 
 # 8. Main routing function
 def route_by_sentiment(user_input: str) -> str:
-    api_key = os.getenv("GOOGLE_API_KEY")
     """
     Main entry point for the chatbot to process user input and return a response.
     Used by chat.py and can be used by frontend applications.
